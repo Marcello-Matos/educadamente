@@ -10,9 +10,16 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,15 +33,17 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./psicologia-app
-        run: npm install
+        run: npm ci
 
-      - name: Build
+      - name: Build Next.js with export
         working-directory: ./psicologia-app
         run: npm run build
 
-      - name: Export static site
-        working-directory: ./psicologia-app
-        run: npx next export -o out || npm run build
+      - name: Create out directory
+        run: mkdir -p psicologia-app/out
+
+      - name: Copy static files
+        run: cp -r psicologia-app/.next/static psicologia-app/out/ || true
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
