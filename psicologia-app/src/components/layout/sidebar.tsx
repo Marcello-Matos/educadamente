@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -68,8 +67,8 @@ export function Sidebar() {
       >
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
+            <img
+              src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/logo.png`}
               alt="Logo Sistema Educadamente"
               width={40}
               height={40}
