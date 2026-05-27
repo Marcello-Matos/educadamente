@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Lock, Mail, Eye, EyeOff, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,8 +25,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Image
-            src="/logo.png"
+          <img
+            src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/logo.png`}
             alt="Logo Sistema Educadamente"
             width={64}
             height={64}

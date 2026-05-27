@@ -5,6 +5,9 @@ const repoName = process.env.GITHUB_REPOSITORY?.split("/")[1] || "";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
+  env: {
+    NEXT_PUBLIC_BASE_PATH: isGithubActions ? `/${repoName}` : "",
+  },
   ...(isGithubActions && {
     output: "export",
     basePath: `/${repoName}`,
