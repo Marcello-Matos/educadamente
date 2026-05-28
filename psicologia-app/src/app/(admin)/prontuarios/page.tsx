@@ -205,7 +205,7 @@ export default function ProntuariosPage() {
                   {/* DADOS DO (A) MENOR */}
                   <div>
                     <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">Dados do (a) Menor</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="col-span-2 sm:col-span-1">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
                         <Input placeholder="Nome completo da criança/adolescente" />
@@ -240,7 +240,7 @@ export default function ProntuariosPage() {
                   {/* DADOS DOS RESPONSÁVEIS */}
                   <div>
                     <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">Dados dos Responsáveis</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Responsável 1</label>
                         <Input placeholder="Nome completo" />
@@ -249,7 +249,7 @@ export default function ProntuariosPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Parentesco</label>
                         <Input placeholder="Ex: Mãe, Pai, Avó..." />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Contato</label>
                         <Input placeholder="(00) 00000-0000" />
                       </div>
@@ -261,7 +261,7 @@ export default function ProntuariosPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Parentesco</label>
                         <Input placeholder="Ex: Mãe, Pai, Avó..." />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Contato</label>
                         <Input placeholder="(00) 00000-0000" />
                       </div>
@@ -429,7 +429,7 @@ export default function ProntuariosPage() {
                   {/* DADOS DO PACIENTE */}
                   <div>
                     <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">Dados do Paciente</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="col-span-2 sm:col-span-1">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
                         <Input placeholder="Nome completo" />
@@ -604,8 +604,8 @@ export default function ProntuariosPage() {
                   {/* 1 – IDENTIFICAÇÃO PACIENTE */}
                   <div>
                     <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">1 – Identificação Paciente</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
                         <Input placeholder="Nome completo" />
                       </div>
@@ -632,8 +632,8 @@ export default function ProntuariosPage() {
                   <div>
                     <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">2 – Identificação Família</h4>
                     <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Pai</p>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Pai</label>
                         <Input placeholder="Nome completo" />
                       </div>
@@ -655,8 +655,8 @@ export default function ProntuariosPage() {
                       </div>
                     </div>
                     <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Mãe</p>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Mãe</label>
                         <Input placeholder="Nome completo" />
                       </div>
@@ -689,8 +689,8 @@ export default function ProntuariosPage() {
 
                     {/* 3.1 */}
                     <p className="text-xs font-bold text-gray-800 mb-3">3.1 – História pré e perinatal</p>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Condições da gestação</label>
                         <Input placeholder="" />
                       </div>
@@ -726,7 +726,7 @@ export default function ProntuariosPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Acidentes</label>
                         <Input placeholder="" />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Doenças da mãe durante a gestação</label>
                         <Input placeholder="" />
                       </div>
@@ -738,11 +738,11 @@ export default function ProntuariosPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Álcool</label>
                         <Input placeholder="" />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Outros</label>
                         <Input placeholder="" />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Estado emocional da mãe durante a gravidez</label>
                         <Textarea rows={2} placeholder="" />
                       </div>
@@ -750,7 +750,7 @@ export default function ProntuariosPage() {
 
                     {/* 3.2 */}
                     <p className="text-xs font-bold text-gray-800 mb-3 mt-6">3.2 – Condições do parto</p>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Duração do trabalho de parto</label>
                         <Input placeholder="" />
@@ -801,15 +801,15 @@ export default function ProntuariosPage() {
                         <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" className="rounded" /> Sim</label>
                         <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" className="rounded" /> Não</label>
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Indicadores de lesão</label>
                         <Input placeholder="" />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Condições imediatas pós-parto</label>
                         <Textarea rows={2} placeholder="" />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Problemas no nascimento</label>
                         <Textarea rows={2} placeholder="" />
                       </div>
@@ -869,7 +869,7 @@ export default function ProntuariosPage() {
                         </label>
                       ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Vocabulário</label>
                         <Input placeholder="" />
@@ -878,7 +878,7 @@ export default function ProntuariosPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Gago</label>
                         <Input placeholder="" />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Quais ainda persistem</label>
                         <Textarea rows={2} placeholder="" />
                       </div>
@@ -925,7 +925,7 @@ export default function ProntuariosPage() {
                   {/* 4 – HISTÓRIA ESCOLAR */}
                   <div>
                     <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">4 – História Escolar</h4>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nível de escolaridade atual</label>
                         <Input placeholder="" />
@@ -935,7 +935,7 @@ export default function ProntuariosPage() {
                         <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" className="rounded" /> Sim</label>
                         <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" className="rounded" /> Não</label>
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Conhecimento de alguma informação relevante relativa às vivências da criança até a entrada para o 1º ciclo do ensino Básico</label>
                         <Textarea rows={2} placeholder="" />
                       </div>
@@ -947,7 +947,7 @@ export default function ProntuariosPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Na escola</label>
                         <Input placeholder="" />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Outras escolas que já frequentou</label>
                         <Input placeholder="" />
                       </div>
@@ -959,28 +959,28 @@ export default function ProntuariosPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nº de anos de retenção do aluno</label>
                         <Input placeholder="" />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Assiduidade do(a) aluno(a)</label>
                         <Input placeholder="" />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="col-span-2 flex items-center gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div className="col-span-full sm:col-span-2 flex items-center gap-4">
                         <label className="block text-sm font-medium text-gray-700">Atividades extra-curriculares: ateliê de tempos livres?</label>
                         <label className="flex items-center gap-1 text-sm text-gray-700"><input type="checkbox" className="rounded" /> Sim</label>
                         <label className="flex items-center gap-1 text-sm text-gray-700"><input type="checkbox" className="rounded" /> Não</label>
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Se sim, onde?</label>
                         <Input placeholder="" />
                       </div>
-                      <div className="col-span-2 flex items-center gap-4">
+                      <div className="col-span-full sm:col-span-2 flex items-center gap-4">
                         <label className="block text-sm font-medium text-gray-700">Frequenta outras atividades extra-curriculares?</label>
                         <label className="flex items-center gap-1 text-sm text-gray-700"><input type="checkbox" className="rounded" /> Sim</label>
                         <label className="flex items-center gap-1 text-sm text-gray-700"><input type="checkbox" className="rounded" /> Não</label>
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-full sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Se sim, quais?</label>
                         <Input placeholder="" />
                       </div>
