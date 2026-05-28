@@ -18,6 +18,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.className} h-full antialiased`}>
+      <head>
+        <meta charSet="utf-8" />
+      </head>
       <body className="min-h-full bg-gray-50">{children}</body>
     </html>
   );

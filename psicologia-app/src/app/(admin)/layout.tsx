@@ -1,5 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { ToastContainer } from "@/components/ui/toast";
+import { Onboarding } from "@/components/ui/onboarding";
 
 export default function AdminLayout({
   children,
@@ -13,6 +15,8 @@ export default function AdminLayout({
         <Header />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>
+      <ToastContainer />
+      <Onboarding />
     </div>
   );
 }

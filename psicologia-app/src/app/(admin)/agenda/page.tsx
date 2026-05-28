@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus,
   ChevronLeft,
@@ -15,7 +15,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { sessions, psychologists, patients } from "@/lib/mock-data";
+import { getPatients, getPsychologists } from "@/lib/supabase/patients";
+import { getSessions } from "@/lib/supabase/sessions";
+import { Patient, Psychologist, Session } from "@/lib/supabase/types";
 
 const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const timeSlots = [
@@ -32,10 +34,27 @@ const statusConfig = {
 
 export default function AgendaPage() {
   const [showForm, setShowForm] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("2024-12-20");
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [view, setView] = useState<"day" | "week">("day");
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [psychologists, setPsychologists] = useState<Psychologist[]>([]);
 
-  const todaySessions = sessions.filter((s) => s.date === selectedDate);
+  useEffect(() => {
+    Promise.all([getSessions(), getPatients(), getPsychologists()])
+      .then(([sessionsData, patientsData, psychologistsData]) => {
+        setSessions(sessionsData);
+        setPatients(patientsData);
+        setPsychologists(psychologistsData);
+      })
+      .catch(() => {
+        setSessions([]);
+        setPatients([]);
+        setPsychologists([]);
+      });
+  }, []);
+
+  const todaySessions = sessions.filter((s) => s.session_date === selectedDate);
 
   return (
     <div className="space-y-6">
@@ -52,7 +71,6 @@ export default function AgendaPage() {
         </Button>
       </div>
 
-      {/* Calendar Controls */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -62,9 +80,9 @@ export default function AgendaPage() {
               </Button>
               <div className="text-center">
                 <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                  20 de Dezembro, 2024
+                  {new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
                 </h2>
-                <p className="text-xs sm:text-sm text-gray-500">Sexta-feira</p>
+                <p className="text-xs sm:text-sm text-gray-500">{new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR", { weekday: "long" })}</p>
               </div>
               <Button variant="outline" size="icon">
                 <ChevronRight className="w-4 h-4" />
@@ -88,7 +106,6 @@ export default function AgendaPage() {
             </div>
           </div>
 
-          {/* Filter by psychologist */}
           <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
             <Button variant="secondary" size="sm" className="flex-shrink-0">Todos</Button>
             {psychologists.map((psy) => (
@@ -100,7 +117,6 @@ export default function AgendaPage() {
         </CardContent>
       </Card>
 
-      {/* New Session Form */}
       {showForm && (
         <Card className="border-indigo-200 bg-indigo-50/30">
           <CardHeader>
@@ -176,7 +192,6 @@ export default function AgendaPage() {
         </Card>
       )}
 
-      {/* Day Schedule */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card>
@@ -186,7 +201,7 @@ export default function AgendaPage() {
             <CardContent>
               <div className="space-y-1">
                 {timeSlots.map((time) => {
-                  const session = todaySessions.find((s) => s.time === time);
+                  const session = todaySessions.find((s) => s.session_time.slice(0, 5) === time);
                   return (
                     <div key={time} className="flex items-stretch gap-3 min-h-[60px]">
                       <div className="w-14 text-sm text-gray-500 pt-2 text-right shrink-0">
@@ -211,10 +226,10 @@ export default function AgendaPage() {
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                               <div>
                                 <p className="text-sm font-medium text-gray-900">
-                                  {session.patientName}
+                                  {session.patients?.name || "Paciente não informado"}
                                 </p>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                  {session.psychologistName} • {session.duration}min
+                                  {session.psychologists?.name || "Não atribuído"} • {session.duration}min
                                 </p>
                               </div>
                               <div className="flex items-center gap-2">
@@ -241,7 +256,6 @@ export default function AgendaPage() {
           </Card>
         </div>
 
-        {/* Side Panel - Summary */}
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -273,26 +287,7 @@ export default function AgendaPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Lembretes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2 p-2 rounded bg-blue-50">
-                <Phone className="w-4 h-4 text-blue-600" />
-                <span className="text-xs text-blue-700">
-                  WhatsApp enviado para 3 pacientes
-                </span>
-              </div>
-              <div className="flex items-center gap-2 p-2 rounded bg-emerald-50">
-                <Clock className="w-4 h-4 text-emerald-600" />
-                <span className="text-xs text-emerald-700">
-                  Próxima sessão em 30 min
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          <Card><CardHeader><CardTitle className="text-base">Lembretes</CardTitle></CardHeader><CardContent><p className="text-sm text-gray-500 text-center py-4">Nenhum lembrete por enquanto</p></CardContent></Card></div>
       </div>
     </div>
   );

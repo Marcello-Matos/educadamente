@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import {
@@ -40,10 +40,7 @@ const fichaLabels: Record<string, { label: string; sub: string; color: string; b
 export default function ProntuariosPage() {
   const [fichaModal, setFichaModal] = useState<FichaModal>(null);
   const [searchFicha, setSearchFicha] = useState("");
-  const [savedFichas, setSavedFichas] = useState<SavedFicha[]>([
-    { id: "f1", patientId: "pat-1", type: "triagem-crianca", date: "2024-12-10", patientName: "Carlos Alberto Silva" },
-    { id: "f2", patientId: "pat-2", type: "triagem-adulto", date: "2024-12-12", patientName: "Fernanda Oliveira" },
-  ]);
+  const [savedFichas, setSavedFichas] = useState<SavedFicha[]>([]);
 
   const filteredFichas = savedFichas.filter((f) =>
     f.patientName.toLowerCase().includes(searchFicha.toLowerCase())
@@ -88,7 +85,7 @@ export default function ProntuariosPage() {
       </div>
 
       <div className="space-y-4">
-              {/* ─── FICHAS BUTTONS ─── */}
+              {/* â”€â”€â”€ FICHAS BUTTONS â”€â”€â”€ */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button
                   onClick={() => setFichaModal("triagem-crianca")}
@@ -181,11 +178,11 @@ export default function ProntuariosPage() {
               </Card>
       </div>
 
-      {/* ─── FICHA MODALS ─── */}
+      {/* â”€â”€â”€ FICHA MODALS â”€â”€â”€ */}
       {fichaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => setFichaModal(null)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            {/* ─── TRIAGEM CRIANÇAS / ADOLESCENTES ─── */}
+            {/* â”€â”€â”€ TRIAGEM CRIANÇAS / ADOLESCENTES â”€â”€â”€ */}
             {fichaModal === "triagem-crianca" && (
               <>
                 <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 bg-pink-50/50">
@@ -227,7 +224,7 @@ export default function ProntuariosPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Turno</label>
-                        <Input placeholder="Ex: Manhã, Tarde, Integral" />
+                        <Input placeholder="Ex: ManhÁ, Tarde, Integral" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Escola</label>
@@ -409,7 +406,7 @@ export default function ProntuariosPage() {
               </>
             )}
 
-            {/* ─── TRIAGEM ADULTOS ─── */}
+            {/* â”€â”€â”€ TRIAGEM ADULTOS â”€â”€â”€ */}
             {fichaModal === "triagem-adulto" && (
               <>
                 <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 bg-blue-50/50">
@@ -583,7 +580,7 @@ export default function ProntuariosPage() {
               </>
             )}
 
-            {/* ─── ANAMNESE PSICOPEDAGOGIA - PSICOLÓGICA ─── */}
+            {/* â”€â”€â”€ ANAMNESE PSICOPEDAGOGIA - PSICOLÁ“GICA â”€â”€â”€ */}
             {fichaModal === "anamnese-psicopedagogia" && (
               <>
                 <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 bg-purple-50/50">
@@ -604,9 +601,9 @@ export default function ProntuariosPage() {
                 </div>
                 <div className="p-4 sm:p-6 space-y-6">
 
-                  {/* 1 – IDENTIFICAÇÃO PACIENTE */}
+                  {/* 1 â€“ IDENTIFICAÇÁO PACIENTE */}
                   <div>
-                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">1 – Identificação Paciente</h4>
+                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">1 â€“ Identificação Paciente</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
@@ -631,9 +628,9 @@ export default function ProntuariosPage() {
                     </div>
                   </div>
 
-                  {/* 2 – IDENTIFICAÇÃO FAMÍLIA */}
+                  {/* 2 â€“ IDENTIFICAÇÁO FAMÁLIA */}
                   <div>
-                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">2 – Identificação Família</h4>
+                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">2 â€“ Identificação Família</h4>
                     <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Pai</p>
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="col-span-2">
@@ -686,12 +683,12 @@ export default function ProntuariosPage() {
                     </div>
                   </div>
 
-                  {/* 3 – HISTÓRIA DO DESENVOLVIMENTO */}
+                  {/* 3 â€“ HISTÓRIA DO DESENVOLVIMENTO */}
                   <div>
-                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">3 – História do Desenvolvimento</h4>
+                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">3 â€“ História do Desenvolvimento</h4>
 
                     {/* 3.1 */}
-                    <p className="text-xs font-bold text-gray-800 mb-3">3.1 – História pré e perinatal</p>
+                    <p className="text-xs font-bold text-gray-800 mb-3">3.1 â€“ História pré e perinatal</p>
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Condições da gestação</label>
@@ -752,7 +749,7 @@ export default function ProntuariosPage() {
                     </div>
 
                     {/* 3.2 */}
-                    <p className="text-xs font-bold text-gray-800 mb-3 mt-6">3.2 – Condições do parto</p>
+                    <p className="text-xs font-bold text-gray-800 mb-3 mt-6">3.2 â€“ Condições do parto</p>
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Duração do trabalho de parto</label>
@@ -787,7 +784,7 @@ export default function ProntuariosPage() {
                         <Input placeholder="" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Apresentação</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">ApresentaçÁo</label>
                         <Input placeholder="" />
                       </div>
                       <div className="flex items-end gap-4">
@@ -819,7 +816,7 @@ export default function ProntuariosPage() {
                     </div>
 
                     {/* 3.3 */}
-                    <p className="text-xs font-bold text-gray-800 mb-3 mt-6">3.3 – Desenvolvimento motor e psicomotor</p>
+                    <p className="text-xs font-bold text-gray-800 mb-3 mt-6">3.3 â€“ Desenvolvimento motor e psicomotor</p>
                     <p className="text-xs text-gray-500 mb-2">Indique a idade e mês em que a criança atingiu cada marco:</p>
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       {[
@@ -833,7 +830,7 @@ export default function ProntuariosPage() {
                         "Despiu as meias",
                         "Vestiu camisolas",
                         "Abotoou o casaco",
-                        "Pediu para ir à casa de banho",
+                        "Pediu para ir à  casa de banho",
                         "Cuidou das suas necessidades",
                         "Preferiu a mão direita à esquerda",
                         "Vocalizou",
@@ -888,7 +885,7 @@ export default function ProntuariosPage() {
                     </div>
 
                     {/* 3.4 */}
-                    <p className="text-xs font-bold text-gray-800 mb-3 mt-6">3.4 – Desenvolvimento emocional</p>
+                    <p className="text-xs font-bold text-gray-800 mb-3 mt-6">3.4 â€“ Desenvolvimento emocional</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
                       {[
                         "Reagiu favoravelmente às pessoas",
@@ -911,7 +908,7 @@ export default function ProntuariosPage() {
                         "Alterava o comportamento na presença de estranhos",
                         "Fazia movimentos estereotipados e rítmicos",
                         "Reagiu favoravelmente a novidades",
-                        "Procurava frequentemente a proteção do adulto",
+                        "Procurava frequentemente a proteçÁo do adulto",
                       ].map((item) => (
                         <label key={item} className="flex items-center gap-2 text-xs text-gray-700">
                           <input type="checkbox" className="rounded" />
@@ -925,9 +922,9 @@ export default function ProntuariosPage() {
                     </div>
                   </div>
 
-                  {/* 4 – HISTÓRIA ESCOLAR */}
+                  {/* 4 â€“ HISTÓRIA ESCOLAR */}
                   <div>
-                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">4 – História Escolar</h4>
+                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">4 â€“ História Escolar</h4>
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nível de escolaridade atual</label>
@@ -1000,9 +997,9 @@ export default function ProntuariosPage() {
                     </div>
                   </div>
 
-                  {/* 5 – HISTÓRIA CLÍNICA */}
+                  {/* 5 â€“ HISTÓRIA CLÍNICA */}
                   <div>
-                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">5 – História Clínica</h4>
+                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">5 â€“ História Clínica</h4>
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Antecedentes de doenças da infância</label>
@@ -1015,9 +1012,9 @@ export default function ProntuariosPage() {
                     </div>
                   </div>
 
-                  {/* 6 – OBSERVAÇÕES */}
+                  {/* 6 â€“ OBSERVAÇÁ•ES */}
                   <div>
-                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">6 – Observações</h4>
+                    <h4 className="text-sm font-bold text-gray-900 uppercase mb-4 border-b border-gray-200 pb-2">6 â€“ Observações</h4>
                     <Textarea rows={4} placeholder="" />
                   </div>
 
@@ -1034,3 +1031,6 @@ export default function ProntuariosPage() {
     </div>
   );
 }
+
+
+
