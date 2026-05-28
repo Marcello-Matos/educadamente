@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[97503,["/educadamente/_next/static/chunks/084j~m74m.c35.js","/educadamente/_next/static/chunks/15d1qy-vw-k.o.js"],"ViewportBoundary"]
+3:I[97503,["/educadamente/_next/static/chunks/084j~m74m.c35.js","/educadamente/_next/static/chunks/15d1qy-vw-k.o.js"],"MetadataBoundary"]
+4:"$Sreact.suspense"
+5:I[78443,["/educadamente/_next/static/chunks/084j~m74m.c35.js","/educadamente/_next/static/chunks/15d1qy-vw-k.o.js"],"IconMark"]
+0:{"rsc":["$","$1","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$L2",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","div",null,{"hidden":true,"children":["$","$L3",null,{"children":["$","$4",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"PsiClinic - Sistema de Gestão para Psicólogos"}],["$","meta","1",{"name":"description","content":"Sistema completo de gestão clínica para psicólogos com prontuário eletrônico, agenda, financeiro e teleconsulta."}],["$","link","2",{"rel":"icon","href":"/educadamente/favicon.ico?favicon.0x3dzn~oxb6tn.ico","sizes":"256x256","type":"image/x-icon"}],["$","$L5","3",{}]]}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"CBtbhE30nCZOk1qKVHHO1"}
