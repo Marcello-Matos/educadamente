@@ -62,22 +62,22 @@ export default function DashboardPage() {
   const overduePayments = payments.filter((p) => p.status === "atrasado");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-8">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm sm:text-base text-gray-500 mt-1">Visão geral da sua clínica</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 leading-tight">Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-500 mt-1 leading-relaxed">Visão geral da sua clínica</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Total Pacientes</p><p className="text-3xl font-bold text-gray-900 mt-1">{dashboardStats.totalPatients}</p></div><div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center"><Users className="w-6 h-6 text-indigo-600" /></div></div><p className="text-xs text-gray-500 mt-2 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Dados reais</p></CardContent></Card>
-        <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Sessões do Mês</p><p className="text-3xl font-bold text-gray-900 mt-1">{dashboardStats.sessionsThisMonth}</p></div><div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center"><Calendar className="w-6 h-6 text-emerald-600" /></div></div><p className="text-xs text-gray-500 mt-2">Taxa de faltas: {dashboardStats.absenceRate}%</p></CardContent></Card>
-        <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Faturamento Mensal</p><p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrency(dashboardStats.monthlyRevenue)}</p></div><div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center"><DollarSign className="w-6 h-6 text-amber-600" /></div></div><p className="text-xs text-gray-500 mt-2 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Dados reais</p></CardContent></Card>
-        <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Psicólogos Ativos</p><p className="text-3xl font-bold text-gray-900 mt-1">{dashboardStats.activePsychologists}</p></div><div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center"><UserCheck className="w-6 h-6 text-purple-600" /></div></div><p className="text-xs text-gray-500 mt-2">Satisfação: sem dados</p></CardContent></Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <Card className="group cursor-default"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Pacientes</p><p className="text-3xl font-bold text-gray-900 mt-1 tabular-nums">{dashboardStats.totalPatients}</p></div><div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"><Users className="w-6 h-6 text-indigo-600" /></div></div><p className="text-xs text-gray-500 mt-2 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Dados reais</p></CardContent></Card>
+        <Card className="group cursor-default"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-xs font-medium uppercase tracking-wide text-gray-500">Sessões do Mês</p><p className="text-3xl font-bold text-gray-900 mt-1 tabular-nums">{dashboardStats.sessionsThisMonth}</p></div><div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"><Calendar className="w-6 h-6 text-emerald-600" /></div></div><p className="text-xs text-gray-500 mt-2">Taxa de faltas: {dashboardStats.absenceRate}%</p></CardContent></Card>
+        <Card className="group cursor-default"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-xs font-medium uppercase tracking-wide text-gray-500">Faturamento Mensal</p><p className="text-3xl font-bold text-gray-900 mt-1 tabular-nums">{formatCurrency(dashboardStats.monthlyRevenue)}</p></div><div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"><DollarSign className="w-6 h-6 text-amber-600" /></div></div><p className="text-xs text-gray-500 mt-2 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Dados reais</p></CardContent></Card>
+        <Card className="group cursor-default"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-xs font-medium uppercase tracking-wide text-gray-500">Psicólogos Ativos</p><p className="text-3xl font-bold text-gray-900 mt-1 tabular-nums">{dashboardStats.activePsychologists}</p></div><div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"><UserCheck className="w-6 h-6 text-purple-600" /></div></div><p className="text-xs text-gray-500 mt-2">Satisfação: sem dados</p></CardContent></Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader><CardTitle>Faturamento Mensal</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-lg font-semibold tracking-tight">Faturamento Mensal</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={monthlyRevenueData}>
@@ -92,7 +92,7 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Sessões por Tipo</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-lg font-semibold tracking-tight">Sessões por Tipo</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
@@ -112,17 +112,17 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between"><CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-indigo-600" />Próximas Sessões</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between"><CardTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight"><Clock className="w-5 h-5 text-indigo-600" />Próximas Sessões</CardTitle></CardHeader>
           <CardContent><div className="space-y-3">
-            {upcomingSessions.map((session) => <div key={session.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50"><div><p className="text-sm font-medium text-gray-900">{session.patients?.name || "Paciente não informado"}</p><p className="text-xs text-gray-500">{session.session_date} às {session.session_time.slice(0, 5)} - {session.psychologists?.name || "Não atribuído"}</p></div><Badge variant={session.type === "teleconsulta" ? "default" : "secondary"}>{session.type}</Badge></div>)}
+            {upcomingSessions.map((session) => <div key={session.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100/80 hover:border-purple-200 border border-transparent transition-all duration-200 cursor-pointer"><div><p className="text-sm font-medium text-gray-900">{session.patients?.name || "Paciente não informado"}</p><p className="text-xs text-gray-500">{session.session_date} às {session.session_time.slice(0, 5)} - {session.psychologists?.name || "Não atribuído"}</p></div><Badge variant={session.type === "teleconsulta" ? "default" : "secondary"}>{session.type}</Badge></div>)}
             {upcomingSessions.length === 0 && <p className="text-sm text-gray-500 text-center py-4">Nenhuma sessão agendada</p>}
           </div></CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between"><CardTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-600" />Pagamentos em Atraso</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between"><CardTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight"><AlertTriangle className="w-5 h-5 text-amber-600" />Pagamentos em Atraso</CardTitle></CardHeader>
           <CardContent><div className="space-y-3">
-            {overduePayments.map((payment) => <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-red-50"><div><p className="text-sm font-medium text-gray-900">{payment.patients?.name || "Paciente não informado"}</p><p className="text-xs text-gray-500">Vencimento: {payment.due_date}</p></div><span className="text-sm font-semibold text-red-600">{formatCurrency(payment.amount)}</span></div>)}
+            {overduePayments.map((payment) => <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-red-50 hover:bg-red-100/80 border border-transparent hover:border-red-200 transition-all duration-200"><div><p className="text-sm font-medium text-gray-900">{payment.patients?.name || "Paciente não informado"}</p><p className="text-xs text-gray-500">Vencimento: {payment.due_date}</p></div><span className="text-sm font-bold text-red-600 tabular-nums">{formatCurrency(payment.amount)}</span></div>)}
             {overduePayments.length === 0 && <p className="text-sm text-gray-500 text-center py-4">Nenhum pagamento em atraso</p>}
           </div></CardContent>
         </Card>

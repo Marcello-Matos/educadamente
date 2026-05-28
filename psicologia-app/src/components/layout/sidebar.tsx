@@ -94,13 +94,13 @@ export function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    ? "bg-indigo-50 text-indigo-700 shadow-sm"
+                    : "text-gray-600 hover:bg-purple-50 hover:text-purple-700"
                 )}
               >
-                <item.icon className={cn("w-5 h-5", isActive ? "text-indigo-600" : "text-gray-400")} />
+                <item.icon className={cn("w-5 h-5 transition-colors duration-200", isActive ? "text-indigo-600" : "text-gray-400 group-hover:text-purple-500")} />
                 {item.name}
               </Link>
             );

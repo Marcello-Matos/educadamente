@@ -57,11 +57,11 @@ export default function AgendaPage() {
   const todaySessions = sessions.filter((s) => s.session_date === selectedDate);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Agenda</h1>
-          <p className="text-sm sm:text-base text-gray-500 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 leading-tight">Agenda</h1>
+          <p className="text-sm sm:text-base text-gray-500 mt-1 leading-relaxed">
             Gerencie as sessões e agendamentos
           </p>
         </div>
@@ -79,7 +79,7 @@ export default function AgendaPage() {
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <div className="text-center">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-gray-900 leading-tight">
                   {new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-500">{new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR", { weekday: "long" })}</p>
@@ -120,7 +120,7 @@ export default function AgendaPage() {
       {showForm && (
         <Card className="border-indigo-200 bg-indigo-50/30">
           <CardHeader>
-            <CardTitle>Agendar Nova Sessão</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">Agendar Nova Sessão</CardTitle>
           </CardHeader>
           <CardContent>
             <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -196,7 +196,7 @@ export default function AgendaPage() {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Sessões do Dia</CardTitle>
+              <CardTitle className="text-lg font-semibold tracking-tight">Sessões do Dia</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-1">
@@ -259,35 +259,35 @@ export default function AgendaPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Resumo do Dia</CardTitle>
+              <CardTitle className="text-base font-semibold tracking-tight">Resumo do Dia</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Total de sessões</span>
-                <span className="text-sm font-semibold">{todaySessions.length}</span>
+                <span className="text-sm font-bold tabular-nums">{todaySessions.length}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Presenciais</span>
-                <span className="text-sm font-semibold">
+                <span className="text-sm font-bold tabular-nums">
                   {todaySessions.filter((s) => s.type === "presencial").length}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Teleconsultas</span>
-                <span className="text-sm font-semibold">
+                <span className="text-sm font-bold tabular-nums">
                   {todaySessions.filter((s) => s.type === "teleconsulta").length}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Faltas</span>
-                <span className="text-sm font-semibold text-amber-600">
+                <span className="text-sm font-bold tabular-nums text-amber-600">
                   {todaySessions.filter((s) => s.status === "falta").length}
                 </span>
               </div>
             </CardContent>
           </Card>
 
-          <Card><CardHeader><CardTitle className="text-base">Lembretes</CardTitle></CardHeader><CardContent><p className="text-sm text-gray-500 text-center py-4">Nenhum lembrete por enquanto</p></CardContent></Card></div>
+          <Card><CardHeader><CardTitle className="text-base font-semibold tracking-tight">Lembretes</CardTitle></CardHeader><CardContent><p className="text-sm text-gray-500 text-center py-4 leading-relaxed">Nenhum lembrete por enquanto</p></CardContent></Card></div>
       </div>
     </div>
   );

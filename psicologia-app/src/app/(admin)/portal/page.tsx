@@ -93,11 +93,11 @@ export default function PortalPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
               <Input type="email" placeholder="seu@email.com" defaultValue="carlos@email.com" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Senha</label>
               <Input type="password" placeholder="••••••••" defaultValue="12345678" />
             </div>
             <Button className="w-full" onClick={() => setIsLoggedIn(true)}>

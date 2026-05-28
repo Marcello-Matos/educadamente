@@ -32,13 +32,13 @@ export default function LoginPage() {
             height={64}
             className="mx-auto mb-4 rounded-2xl"
           />
-          <h1 className="text-3xl font-bold text-gray-900">Sistema Educadamente</h1>
-          <p className="text-gray-500 mt-1">Sistema de Gestão para Psicólogos</p>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 leading-tight">Sistema Educadamente</h1>
+          <p className="text-gray-500 mt-1 leading-relaxed">Sistema de Gestão para Psicólogos</p>
         </div>
 
         <Card className="shadow-xl border-0">
           <CardHeader className="pb-4">
-            <h2 className="text-xl font-semibold text-center text-gray-900">
+            <h2 className="text-xl font-semibold tracking-tight text-center text-gray-900 leading-tight">
               Entrar no Sistema
             </h2>
           </CardHeader>

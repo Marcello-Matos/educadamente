@@ -44,8 +44,8 @@ export function Header() {
     <>
       <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-gray-200">
         {/* Search */}
-        <div className="flex items-center gap-4 flex-1">
-          <div className="relative w-full max-w-96 ml-10 lg:ml-0">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="relative w-full max-w-96 ml-12 lg:ml-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input placeholder="Buscar pacientes, sessões..." className="pl-10 bg-gray-50 border-gray-200" />
           </div>

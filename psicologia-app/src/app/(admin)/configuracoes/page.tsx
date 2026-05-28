@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function ConfiguracoesPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-8">
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Configurações</h1>
         <p className="text-sm sm:text-base text-gray-500 mt-1">
@@ -179,13 +179,13 @@ export default function ConfiguracoesPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Tempo de sessão (minutos)
               </label>
               <Input type="number" defaultValue="30" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Autenticação de dois fatores
               </label>
               <div className="flex items-center gap-2">
@@ -194,7 +194,7 @@ export default function ConfiguracoesPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Backup automático
               </label>
               <div className="flex items-center gap-2">

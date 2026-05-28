@@ -1057,7 +1057,7 @@ export default function UsuariosPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-8">
       {renderModal()}
 
       {/* Header */}
@@ -1122,12 +1122,12 @@ export default function UsuariosPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="text-left text-xs font-semibold text-gray-500 uppercase px-6 py-3">Usuário</th>
-                      <th className="text-left text-xs font-semibold text-gray-500 uppercase px-6 py-3">Cargo</th>
-                      <th className="text-left text-xs font-semibold text-gray-500 uppercase px-6 py-3">Perfil</th>
-                      <th className="text-left text-xs font-semibold text-gray-500 uppercase px-6 py-3">Status</th>
-                      <th className="text-left text-xs font-semibold text-gray-500 uppercase px-6 py-3">Último Acesso</th>
-                      <th className="text-right text-xs font-semibold text-gray-500 uppercase px-6 py-3">Ações</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Usuário</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Cargo</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Perfil</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Status</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Último Acesso</th>
+                      <th className="text-right text-xs font-semibold text-gray-500 uppercase px-4 py-3">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -1135,7 +1135,7 @@ export default function UsuariosPage() {
                       const profile = getProfile(user.profileId);
                       return (
                         <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-3">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
                                 {profile?.id === "profile-master" ? (
@@ -1150,25 +1150,25 @@ export default function UsuariosPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-3">
                             <p className="text-sm text-gray-700">{user.role}</p>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-3">
                             {profile && (
                               <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${profileColorMap[profile.color]}`}>
                                 {profile.name}
                               </span>
                             )}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-3">
                             <Badge variant={user.status === "ativo" ? "success" : "secondary"}>
                               {user.status === "ativo" ? "Ativo" : "Inativo"}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-3">
                             <p className="text-xs text-gray-500">{user.lastAccess}</p>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-1">
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedUserId(user.id); setModal("view-user"); }}>
                                 <Eye className="w-4 h-4 text-gray-500" />
@@ -1210,7 +1210,7 @@ export default function UsuariosPage() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
             {profiles.map((profile) => {
               const usersWithProfile = users.filter((u) => u.profileId === profile.id);
               return (

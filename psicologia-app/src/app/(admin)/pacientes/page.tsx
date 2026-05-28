@@ -128,11 +128,11 @@ export default function PacientesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Pacientes</h1>
-          <p className="text-sm sm:text-base text-gray-500 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 leading-tight">Pacientes</h1>
+          <p className="text-sm sm:text-base text-gray-500 mt-1 leading-relaxed">
             Gerencie o cadastro dos seus pacientes
           </p>
         </div>
@@ -167,32 +167,32 @@ export default function PacientesPage() {
       {showForm && (
         <Card className="border-indigo-200 bg-indigo-50/30">
           <CardHeader>
-            <CardTitle>Cadastro de Paciente</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">Cadastro de Paciente</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nome Completo *</label>
                 <Input placeholder="Nome do paciente" value={form.name} onChange={(e) => handleChange("name", e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">CPF</label>
                 <Input placeholder="000.000.000-00" value={form.cpf ?? ""} onChange={(e) => handleChange("cpf", e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Data de Nascimento</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de Nascimento</label>
                 <Input type="date" value={form.birth_date ?? ""} onChange={(e) => handleChange("birth_date", e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <Input type="email" placeholder="email@exemplo.com" value={form.email ?? ""} onChange={(e) => handleChange("email", e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Telefone *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefone *</label>
                 <Input placeholder="(00) 00000-0000" value={form.phone} onChange={(e) => handleChange("phone", e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Gênero</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Gênero</label>
                 <select value={form.gender ?? ""} onChange={(e) => handleChange("gender", e.target.value)} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                   <option value="">Selecione</option>
                   <option>Masculino</option>
@@ -202,11 +202,11 @@ export default function PacientesPage() {
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Endereço</label>
                 <Input placeholder="Rua, número, bairro - Cidade/UF" value={form.address ?? ""} onChange={(e) => handleChange("address", e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Psicólogo(a) Responsável</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Psicólogo(a) Responsável</label>
                 <select value={form.psychologist_id ?? ""} onChange={(e) => handleChange("psychologist_id", e.target.value)} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                   <option value="">Selecione</option>
                   {psychologists.map((p) => (
@@ -215,7 +215,7 @@ export default function PacientesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Plano</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Plano</label>
                 <select value={form.plan} onChange={(e) => handleChange("plan", e.target.value)} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                   <option value="mensal">Mensal</option>
                   <option value="anual">Anual</option>
@@ -223,11 +223,11 @@ export default function PacientesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contato de Emergência</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Contato de Emergência</label>
                 <Input placeholder="Nome do contato" value={form.emergency_contact ?? ""} onChange={(e) => handleChange("emergency_contact", e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Telefone Emergência</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefone Emergência</label>
                 <Input placeholder="(00) 00000-0000" value={form.emergency_phone ?? ""} onChange={(e) => handleChange("emergency_phone", e.target.value)} />
               </div>
               <div className="col-span-full flex gap-3 pt-4">
@@ -242,18 +242,18 @@ export default function PacientesPage() {
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[640px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3">Paciente</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3">Contato</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3">Psicólogo(a)</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3">Plano</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3">Status</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3">Ações</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Paciente</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Contato</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Psicólogo(a)</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Plano</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Status</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {loading && (
                   <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">Carregando pacientes...</td></tr>
                 )}
@@ -261,29 +261,29 @@ export default function PacientesPage() {
                   <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">Nenhum paciente cadastrado ainda.</td></tr>
                 )}
                 {!loading && filteredPatients.map((patient) => (
-                  <tr key={patient.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
+                  <tr key={patient.id} className="hover:bg-gray-50/80 transition-colors duration-150">
+                    <td className="px-4 py-3">
                       <div>
                         <p className="text-sm font-medium text-gray-900">{patient.name}</p>
                         <p className="text-xs text-gray-500">CPF: {patient.cpf || "Não informado"}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         <span className="text-xs text-gray-600 flex items-center gap-1"><Phone className="w-3 h-3" /> {patient.phone}</span>
                         <span className="text-xs text-gray-600 flex items-center gap-1"><Mail className="w-3 h-3" /> {patient.email || "Não informado"}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <span className="text-sm text-gray-700">{patient.psychologists?.name || "Não atribuído"}</span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <Badge variant={planConfig[patient.plan].variant}>{planConfig[patient.plan].label}</Badge>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <Badge variant={statusConfig[patient.status].variant}>{statusConfig[patient.status].label}</Badge>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="w-4 h-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="w-4 h-4" /></Button>
