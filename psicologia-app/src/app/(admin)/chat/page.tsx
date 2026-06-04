@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, MessageSquare, Loader2, Users } from "lucide-react";
+import { Send, MessageSquare, Loader2, Users, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase/client";
 import { getTeamMessages, sendTeamMessage } from "@/lib/supabase/chat";
-import { getPsychologists } from "@/lib/supabase/patients";
+import { getPsychologists, createPsychologist } from "@/lib/supabase/patients";
 import { TeamMessage, Psychologist } from "@/lib/supabase/types";
+import { toast } from "@/hooks/use-toast";
 
 const IDENTITY_KEY = "psi_chat_identity";
 
@@ -32,6 +34,12 @@ export default function ChatPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Cadastro rápido de profissional
+  const [showRegister, setShowRegister] = useState(false);
+  const [regName, setRegName] = useState("");
+  const [regCrp, setRegCrp] = useState("");
+  const [regSaving, setRegSaving] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(IDENTITY_KEY);
@@ -65,6 +73,21 @@ export default function ChatPage() {
     localStorage.setItem(IDENTITY_KEY, JSON.stringify(id));
   }
 
+  async function handleRegister() {
+    if (!regName.trim() || !regCrp.trim()) return;
+    setRegSaving(true);
+    try {
+      const novo = await createPsychologist({ name: regName.trim(), crp: regCrp.trim() });
+      setPsych(prev => [...prev, novo].sort((a, b) => a.name.localeCompare(b.name)));
+      toast.success("Profissional cadastrado", novo.name);
+      setShowRegister(false);
+      setRegName(""); setRegCrp("");
+      pickIdentity(novo);
+    } catch {
+      toast.error("Erro ao cadastrar", "O CRP/registro pode já existir, ou a tabela não está acessível.");
+    } finally { setRegSaving(false); }
+  }
+
   async function handleSend() {
     if (!draft.trim() || !identity) return;
     const content = draft.trim();
@@ -89,7 +112,9 @@ export default function ChatPage() {
           <h2 className="text-lg font-bold text-gray-900">Quem é você?</h2>
           <p className="text-sm text-gray-500 mt-1 mb-5">Selecione seu perfil para entrar no chat da equipe.</p>
           <div className="space-y-2">
-            {psychologists.length === 0 && <p className="text-sm text-gray-400">Nenhum profissional cadastrado.</p>}
+            {psychologists.length === 0 && !showRegister && (
+              <p className="text-sm text-gray-400 py-2">Nenhum profissional cadastrado ainda. Cadastre o primeiro abaixo.</p>
+            )}
             {psychologists.map(p => (
               <button key={p.id} onClick={() => pickIdentity(p)} className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors text-left">
                 <span className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ background: colorFor(p.name) }}>
@@ -99,6 +124,30 @@ export default function ChatPage() {
               </button>
             ))}
           </div>
+
+          {showRegister ? (
+            <div className="mt-4 p-4 rounded-xl border border-indigo-100 bg-indigo-50/40 text-left space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><UserPlus className="w-4 h-4 text-indigo-600" /> Novo profissional</h3>
+                <button onClick={() => setShowRegister(false)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Nome *</label>
+                <Input value={regName} onChange={e => setRegName(e.target.value)} placeholder="Ex: Dra. Ana Souza" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Registro / CRP *</label>
+                <Input value={regCrp} onChange={e => setRegCrp(e.target.value)} placeholder="Ex: CRP 06/123456" />
+              </div>
+              <Button onClick={handleRegister} disabled={regSaving || !regName.trim() || !regCrp.trim()} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                {regSaving ? "Salvando..." : "Cadastrar e entrar"}
+              </Button>
+            </div>
+          ) : (
+            <button onClick={() => setShowRegister(true)} className="mt-4 w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50/50 transition-colors text-sm font-medium">
+              <UserPlus className="w-4 h-4" /> Cadastrar profissional
+            </button>
+          )}
         </div>
       </div>
     );
@@ -116,12 +165,16 @@ export default function ChatPage() {
           </div>
         </div>
         {identity && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-white/80 hidden sm:inline">Você é</span>
+          <button
+            onClick={() => { setIdentity(null); localStorage.removeItem(IDENTITY_KEY); }}
+            title="Trocar perfil / cadastrar outro"
+            className="flex items-center gap-2 rounded-full hover:bg-white/15 px-2 py-1 transition-colors"
+          >
+            <span className="text-xs text-white/80 hidden sm:inline">Trocar</span>
             <span className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white/40" style={{ background: colorFor(identity.name) }}>
               {initials(identity.name)}
             </span>
-          </div>
+          </button>
         )}
       </div>
 

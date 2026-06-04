@@ -11,6 +11,29 @@ export async function getPsychologists() {
   return (data ?? []) as Psychologist[];
 }
 
+export async function createPsychologist(input: {
+  name: string;
+  crp: string;
+  email?: string | null;
+  phone?: string | null;
+  specialties?: string[];
+}) {
+  const { data, error } = await supabase
+    .from("psychologists")
+    .insert({
+      name: input.name,
+      crp: input.crp,
+      email: input.email ?? null,
+      phone: input.phone ?? null,
+      specialties: input.specialties ?? [],
+    })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data as Psychologist;
+}
+
 export async function getPatients() {
   const { data, error } = await supabase
     .from("patients")
