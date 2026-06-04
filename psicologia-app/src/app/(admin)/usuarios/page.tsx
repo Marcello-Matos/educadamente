@@ -1,6 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase/client";
+import {
+  getProfiles, createProfile, updateProfile, deleteProfile, seedProfilesIfEmpty,
+  getSystemUsers, createSystemUser, updateSystemUser, deleteSystemUser,
+} from "@/lib/supabase/users";
+import { toast } from "@/hooks/use-toast";
 import {
   UserCog,
   Plus,
@@ -297,75 +303,6 @@ const initialProfiles: Profile[] = [
   },
 ];
 
-const initialUsers: SystemUser[] = [
-  {
-    id: "user-1",
-    name: "Dra. Maria Santos",
-    email: "maria@clinica.com",
-    phone: "(11) 99999-0001",
-    role: "Psicóloga - CRP 06/123456",
-    profileId: "profile-master",
-    status: "ativo",
-    createdAt: "01/01/2024",
-    lastAccess: "26/05/2025 às 17:30",
-  },
-  {
-    id: "user-2",
-    name: "Dr. João Oliveira",
-    email: "joao@clinica.com",
-    phone: "(11) 99999-0002",
-    role: "Psicólogo - CRP 06/654321",
-    profileId: "profile-psicologo",
-    status: "ativo",
-    createdAt: "15/03/2024",
-    lastAccess: "26/05/2025 às 16:00",
-  },
-  {
-    id: "user-3",
-    name: "Camila Rodrigues",
-    email: "camila@clinica.com",
-    phone: "(11) 99999-0003",
-    role: "Nutricionista - CRN 03/45678",
-    profileId: "profile-nutricionista",
-    status: "ativo",
-    createdAt: "01/06/2024",
-    lastAccess: "26/05/2025 às 17:25",
-  },
-  {
-    id: "user-4",
-    name: "Fernanda Lima",
-    email: "fernanda@clinica.com",
-    phone: "(11) 99999-0004",
-    role: "Fisioterapeuta - CREFITO 12345",
-    profileId: "profile-fisioterapeuta",
-    status: "ativo",
-    createdAt: "10/08/2024",
-    lastAccess: "26/05/2025 às 14:00",
-  },
-  {
-    id: "user-5",
-    name: "Patrícia Alves",
-    email: "patricia@clinica.com",
-    phone: "(11) 99999-0005",
-    role: "Fonoaudióloga - CRFa 2-9876",
-    profileId: "profile-fonoaudiologa",
-    status: "ativo",
-    createdAt: "15/09/2024",
-    lastAccess: "26/05/2025 às 15:30",
-  },
-  {
-    id: "user-6",
-    name: "Renata Souza",
-    email: "renata@clinica.com",
-    phone: "(11) 99999-0006",
-    role: "Psicopedagoga",
-    profileId: "profile-psicopedagoga",
-    status: "ativo",
-    createdAt: "01/10/2024",
-    lastAccess: "26/05/2025 às 16:45",
-  },
-];
-
 type PageView = "users" | "profiles";
 type ModalType = null | "create-user" | "edit-user" | "create-profile" | "edit-profile" | "view-user" | "delete-confirm";
 
@@ -373,8 +310,9 @@ export default function UsuariosPage() {
   const [pageView, setPageView] = useState<PageView>("users");
   const [searchTerm, setSearchTerm] = useState("");
   const [modal, setModal] = useState<ModalType>(null);
-  const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
-  const [users, setUsers] = useState<SystemUser[]>(initialUsers);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [users, setUsers] = useState<SystemUser[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "user" | "profile"; id: string } | null>(null);
@@ -398,6 +336,29 @@ export default function UsuariosPage() {
   const [profileColor, setProfileColor] = useState("indigo");
   const [profilePerms, setProfilePerms] = useState<string[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const seeded = await seedProfilesIfEmpty(initialProfiles.map(({ id: _id, ...rest }) => rest));
+        setProfiles(seeded);
+        const us = await getSystemUsers();
+        setUsers(us);
+      } catch {
+        toast.error("Erro ao carregar dados", "Rode o arquivo supabase/users.sql no Supabase.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+
+    const channel = supabase
+      .channel("users-page-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "system_users" }, () => getSystemUsers().then(setUsers).catch(() => {}))
+      .on("postgres_changes", { event: "*", schema: "public", table: "access_profiles" }, () => getProfiles().then(setProfiles).catch(() => {}))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const getProfile = (profileId: string) => profiles.find((p) => p.id === profileId);
 
@@ -456,30 +417,24 @@ export default function UsuariosPage() {
   };
 
   // ─── SAVE USER ───
-  const saveUser = () => {
+  const saveUser = async () => {
     if (!formName || !formEmail || !formRole || !formProfileId) return;
-    if (modal === "create-user") {
-      const newUser: SystemUser = {
-        id: `user-${Date.now()}`,
-        name: formName,
-        email: formEmail,
-        phone: formPhone,
-        role: formRole,
-        profileId: formProfileId,
-        status: formStatus,
-        createdAt: new Date().toLocaleDateString("pt-BR"),
-        lastAccess: "Nunca",
-      };
-      setUsers([...users, newUser]);
-    } else if (modal === "edit-user" && selectedUserId) {
-      setUsers(users.map((u) =>
-        u.id === selectedUserId
-          ? { ...u, name: formName, email: formEmail, phone: formPhone, role: formRole, profileId: formProfileId, status: formStatus }
-          : u
-      ));
+    const payload = { name: formName, email: formEmail, phone: formPhone, role: formRole, profileId: formProfileId, status: formStatus };
+    try {
+      if (modal === "create-user") {
+        const nu = await createSystemUser(payload);
+        setUsers((prev) => [...prev, nu]);
+        toast.success("Usuário criado", formName);
+      } else if (modal === "edit-user" && selectedUserId) {
+        const up = await updateSystemUser(selectedUserId, payload);
+        setUsers((prev) => prev.map((u) => (u.id === selectedUserId ? up : u)));
+        toast.success("Usuário atualizado");
+      }
+      setModal(null);
+      resetUserForm();
+    } catch {
+      toast.error("Erro ao salvar usuário", "Verifique a conexão com o Supabase.");
     }
-    setModal(null);
-    resetUserForm();
   };
 
   // ─── OPEN CREATE PROFILE ───
@@ -499,36 +454,40 @@ export default function UsuariosPage() {
   };
 
   // ─── SAVE PROFILE ───
-  const saveProfile = () => {
+  const saveProfile = async () => {
     if (!profileName) return;
-    if (modal === "create-profile") {
-      const newProfile: Profile = {
-        id: `profile-${Date.now()}`,
-        name: profileName,
-        description: profileDesc,
-        color: profileColor,
-        permissions: profilePerms,
-        isSystem: false,
-      };
-      setProfiles([...profiles, newProfile]);
-    } else if (modal === "edit-profile" && selectedProfileId) {
-      setProfiles(profiles.map((p) =>
-        p.id === selectedProfileId
-          ? { ...p, name: profileName, description: profileDesc, color: profileColor, permissions: profilePerms }
-          : p
-      ));
+    try {
+      if (modal === "create-profile") {
+        const np = await createProfile({ name: profileName, description: profileDesc, color: profileColor, permissions: profilePerms, isSystem: false });
+        setProfiles((prev) => [...prev, np]);
+        toast.success("Perfil criado", profileName);
+      } else if (modal === "edit-profile" && selectedProfileId) {
+        const upd = await updateProfile(selectedProfileId, { name: profileName, description: profileDesc, color: profileColor, permissions: profilePerms });
+        setProfiles((prev) => prev.map((p) => (p.id === selectedProfileId ? upd : p)));
+        toast.success("Perfil atualizado");
+      }
+      setModal(null);
+      resetProfileForm();
+    } catch {
+      toast.error("Erro ao salvar perfil", "Verifique a conexão com o Supabase.");
     }
-    setModal(null);
-    resetProfileForm();
   };
 
   // ─── DELETE ───
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    if (deleteTarget.type === "user") {
-      setUsers(users.filter((u) => u.id !== deleteTarget.id));
-    } else {
-      setProfiles(profiles.filter((p) => p.id !== deleteTarget.id));
+    const target = deleteTarget;
+    try {
+      if (target.type === "user") {
+        await deleteSystemUser(target.id);
+        setUsers((prev) => prev.filter((u) => u.id !== target.id));
+      } else {
+        await deleteProfile(target.id);
+        setProfiles((prev) => prev.filter((p) => p.id !== target.id));
+      }
+      toast.success("Excluído com sucesso");
+    } catch {
+      toast.error("Erro ao excluir");
     }
     setDeleteTarget(null);
     setModal(null);
@@ -1189,10 +1148,15 @@ export default function UsuariosPage() {
                   </tbody>
                 </table>
               </div>
-              {filteredUsers.length === 0 && (
+              {loading && (
+                <div className="text-center py-12">
+                  <p className="text-gray-400 text-sm">Carregando usuários...</p>
+                </div>
+              )}
+              {!loading && filteredUsers.length === 0 && (
                 <div className="text-center py-12">
                   <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">Nenhum usuário encontrado</p>
+                  <p className="text-gray-500">Nenhum usuário cadastrado. Clique em "Novo Usuário" para começar.</p>
                 </div>
               )}
             </CardContent>
