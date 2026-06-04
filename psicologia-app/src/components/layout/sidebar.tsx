@@ -16,6 +16,9 @@ import {
   UserCog,
   Menu,
   X,
+  ListTodo,
+  Bell,
+  MessageSquare,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -23,6 +26,9 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Pacientes", href: "/pacientes", icon: Users },
   { name: "Agenda", href: "/agenda", icon: Calendar },
+  { name: "Tarefas", href: "/tarefas", icon: ListTodo },
+  { name: "Lembretes", href: "/lembretes", icon: Bell },
+  { name: "Chat da Equipe", href: "/chat", icon: MessageSquare },
   { name: "Financeiro", href: "/financeiro", icon: CreditCard },
   { name: "Prontuários", href: "/prontuarios", icon: FileText },
   { name: "Teleconsulta", href: "/teleconsulta", icon: Video },

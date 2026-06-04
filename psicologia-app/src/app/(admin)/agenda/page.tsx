@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/lib/supabase/client";
 import { getPatients, getPsychologists } from "@/lib/supabase/patients";
 import { getSessions, createSession } from "@/lib/supabase/sessions";
 import { Patient, Psychologist, Session } from "@/lib/supabase/types";
@@ -87,6 +88,15 @@ export default function AgendaPage() {
     Promise.all([getSessions(), getPatients(), getPsychologists()])
       .then(([s, p, ps]) => { setSessions(s); setPatients(p); setPsych(ps); })
       .catch(() => {});
+
+    // Colaboração em tempo real: recarrega sessões quando qualquer um altera
+    const channel = supabase
+      .channel("sessions-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, () => {
+        getSessions().then(setSessions).catch(() => {});
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const saveColor = useCallback((psyId: string, colorId: string) => {
