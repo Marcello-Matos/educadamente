@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Plus, ChevronLeft, ChevronRight, Video, MapPin,
-  X, Clock, User, Calendar, Palette, Check, CalendarDays,
+  X, Clock, User, Calendar, Palette, Check, CalendarDays, Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase/client";
 import { getPatients, getPsychologists } from "@/lib/supabase/patients";
 import { getSessions, createSession } from "@/lib/supabase/sessions";
+import { createReminder } from "@/lib/supabase/reminders";
 import { Patient, Psychologist, Session } from "@/lib/supabase/types";
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────────────
@@ -81,6 +82,8 @@ export default function AgendaPage() {
   const [fTime, setFTime]         = useState("09:00");
   const [fDur, setFDur]           = useState("50");
   const [fType, setFType]         = useState("presencial");
+  const [fReminder, setFReminder] = useState(true);
+  const [fReminderHours, setFReminderHours] = useState("24");
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -146,6 +149,25 @@ export default function AgendaPage() {
     try {
       const s = await createSession({ patient_id: fPatient, psychologist_id: fPsy, session_date: fDate, session_time: fTime, duration: Number(fDur), type: fType as "presencial" | "teleconsulta" });
       setSessions(prev => [...prev, s]);
+
+      // Lembrete automático X horas antes da sessão
+      if (fReminder) {
+        const sessionStart = new Date(`${fDate}T${fTime}:00`);
+        const remindAt = new Date(sessionStart.getTime() - Number(fReminderHours) * 60 * 60 * 1000);
+        const patientName = patients.find(p => p.id === fPatient)?.name || "paciente";
+        try {
+          await createReminder({
+            title: `Lembrete: sessão com ${patientName}`,
+            notes: `Sessão ${fType} às ${fTime} do dia ${new Date(`${fDate}T00:00:00`).toLocaleDateString("pt-BR")}.`,
+            remind_at: remindAt.toISOString(),
+            channel: "whatsapp",
+            session_id: s.id,
+            patient_id: fPatient,
+            psychologist_id: fPsy,
+          });
+        } catch { /* lembrete é opcional, ignora se a tabela não existir */ }
+      }
+
       setShowModal(false);
     } catch (_) { /* silent */ }
     finally { setSaving(false); }
@@ -444,6 +466,33 @@ export default function AgendaPage() {
                     <button type="button" onClick={() => setFType("teleconsulta")} className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium transition-colors ${fType === "teleconsulta" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}>
                       <Video className="w-3.5 h-3.5" /> Online
                     </button>
+                  </div>
+                </div>
+
+                {/* Lembrete automático */}
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <button
+                        type="button"
+                        onClick={() => setFReminder(v => !v)}
+                        className={`relative w-9 h-5 rounded-full transition-colors ${fReminder ? "bg-indigo-600" : "bg-gray-300"}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${fReminder ? "translate-x-4" : ""}`} />
+                      </button>
+                      <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                        <Bell className="w-3.5 h-3.5 text-indigo-500" /> Criar lembrete
+                      </span>
+                    </label>
+                    {fReminder && (
+                      <select value={fReminderHours} onChange={e => setFReminderHours(e.target.value)} className="h-8 rounded-md border border-gray-300 bg-white px-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="1">1h antes</option>
+                        <option value="2">2h antes</option>
+                        <option value="3">3h antes</option>
+                        <option value="24">1 dia antes</option>
+                        <option value="48">2 dias antes</option>
+                      </select>
+                    )}
                   </div>
                 </div>
               </div>

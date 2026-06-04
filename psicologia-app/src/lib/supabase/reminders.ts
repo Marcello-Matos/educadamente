@@ -38,3 +38,13 @@ export async function deleteReminder(id: string) {
   const { error } = await supabase.from("reminders").delete().eq("id", id);
   if (error) throw error;
 }
+
+export async function getPendingReminderCount() {
+  const { count, error } = await supabase
+    .from("reminders")
+    .select("id", { count: "exact", head: true })
+    .eq("done", false);
+
+  if (error) return 0;
+  return count ?? 0;
+}

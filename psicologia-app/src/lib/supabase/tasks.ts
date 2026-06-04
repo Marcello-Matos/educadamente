@@ -38,3 +38,13 @@ export async function deleteTask(id: string) {
   const { error } = await supabase.from("tasks").delete().eq("id", id);
   if (error) throw error;
 }
+
+export async function getPendingTaskCount() {
+  const { count, error } = await supabase
+    .from("tasks")
+    .select("id", { count: "exact", head: true })
+    .neq("status", "concluida");
+
+  if (error) return 0;
+  return count ?? 0;
+}
