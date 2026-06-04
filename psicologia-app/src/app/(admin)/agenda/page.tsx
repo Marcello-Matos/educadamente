@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Plus, ChevronLeft, ChevronRight, Video, MapPin,
-  X, Clock, User, Calendar, Palette, Check,
+  X, Clock, User, Calendar, Palette, Check, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { getPatients, getPsychologists } from "@/lib/supabase/patients";
 import { getSessions, createSession } from "@/lib/supabase/sessions";
 import { Patient, Psychologist, Session } from "@/lib/supabase/types";
@@ -39,29 +40,36 @@ const STATUS_CFG = {
 
 const STORAGE_KEY = "psi_pro_colors";
 
-function getWeekDates(anchor: Date): Date[] {
-  const day = anchor.getDay();
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(anchor);
-    d.setDate(anchor.getDate() - day + i);
-    return d;
-  });
+function toDateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function toDateStr(d: Date) {
-  return d.toISOString().split("T")[0];
+// Returns a flat list of dates filling complete weeks (Sun→Sat) that cover the month
+function getMonthMatrix(anchor: Date): Date[] {
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay(); // 0 = Sunday
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const start = new Date(year, month, 1 - startOffset);
+  return Array.from({ length: totalCells }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
+  });
 }
 
 // ─── COMPONENT ──────────────────────────────────────────────────────────────
 export default function AgendaPage() {
   const [anchor, setAnchor]           = useState(() => new Date());
-  const [view, setView]               = useState<"day" | "week">("week");
   const [sessions, setSessions]       = useState<Session[]>([]);
   const [patients, setPatients]       = useState<Patient[]>([]);
   const [psychologists, setPsych]     = useState<Psychologist[]>([]);
   const [filterPsy, setFilterPsy]     = useState<string | null>(null);
   const [showModal, setShowModal]     = useState(false);
   const [colorModal, setColorModal]   = useState<string | null>(null); // psychologist id
+  const [dayModal, setDayModal]       = useState<string | null>(null); // selected day yyyy-mm-dd
   const [psyColors, setPsyColors]     = useState<Record<string, string>>({});
   const [saving, setSaving]           = useState(false);
 
@@ -98,23 +106,29 @@ export default function AgendaPage() {
     .filter(([k]) => k !== colorModal)
     .map(([, v]) => v);
 
-  const weekDates = getWeekDates(anchor);
+  const monthDates = getMonthMatrix(anchor);
+  const currentMonth = anchor.getMonth();
 
   const visibleSessions = filterPsy
     ? sessions.filter(s => s.psychologist_id === filterPsy)
     : sessions;
 
-  function sessionsAt(date: string, time: string) {
-    return visibleSessions.filter(s => s.session_date === date && s.session_time.slice(0, 5) === time);
+  function sessionsOnDay(date: string) {
+    return visibleSessions
+      .filter(s => s.session_date === date)
+      .sort((a, b) => a.session_time.localeCompare(b.session_time));
   }
 
   function navigate(dir: number) {
-    const d = new Date(anchor);
-    d.setDate(d.getDate() + (view === "week" ? dir * 7 : dir));
-    setAnchor(d);
+    setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + dir, 1));
   }
 
   function goToday() { setAnchor(new Date()); }
+
+  function openNewSession(date?: string) {
+    if (date) setFDate(date);
+    setShowModal(true);
+  }
 
   async function handleSave() {
     if (!fPatient || !fPsy || !fDate || !fTime) return;
@@ -127,7 +141,6 @@ export default function AgendaPage() {
     finally { setSaving(false); }
   }
 
-  const dayDates = view === "day" ? [anchor] : weekDates;
   const todayStr = toDateStr(new Date());
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
@@ -135,32 +148,25 @@ export default function AgendaPage() {
     <div className="flex flex-col h-full min-h-0 gap-0">
 
       {/* ── TOP BAR ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-4 border-b border-gray-100 bg-white">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button onClick={goToday} className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-700">
-            Hoje
-          </button>
-          <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
-            <ChevronRight className="w-5 h-5" />
-          </button>
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 ml-1">
-            {view === "week"
-              ? `${weekDates[1].toLocaleDateString("pt-BR", { day: "numeric", month: "short" })} – ${weekDates[5].toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" })}`
-              : anchor.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-          </h2>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-            <button onClick={() => setView("day")} className={`px-3 py-1.5 text-sm font-medium transition-colors ${view === "day" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}>Dia</button>
-            <button onClick={() => setView("week")} className={`px-3 py-1.5 text-sm font-medium transition-colors ${view === "week" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}>Semana</button>
+      <div className="px-4 py-4 border-b border-gray-100 bg-gradient-to-r from-indigo-600 to-violet-600">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="w-6 h-6 text-white/90" />
+            <h1 className="text-xl sm:text-2xl font-bold text-white capitalize leading-tight">
+              {anchor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+            </h1>
           </div>
-          <Button onClick={() => setShowModal(true)} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700">
-            <Plus className="w-4 h-4" /> Nova Sessão
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-white/15 transition-colors text-white">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button onClick={goToday} className="px-3 py-1.5 text-sm font-semibold rounded-full bg-white/15 hover:bg-white/25 transition-colors text-white">
+              Hoje
+            </button>
+            <button onClick={() => navigate(1)} className="p-2 rounded-full hover:bg-white/15 transition-colors text-white">
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -197,71 +203,125 @@ export default function AgendaPage() {
         })}
       </div>
 
-      {/* ── CALENDAR GRID ── */}
-      <div className="flex-1 overflow-auto bg-gray-50">
-        <div className="flex min-w-[640px]">
-          {/* Time gutter */}
-          <div className="w-14 shrink-0 bg-white border-r border-gray-100">
-            <div className="h-12 border-b border-gray-100" />
-            {TIME_SLOTS.map(t => (
-              <div key={t} className="h-16 border-b border-gray-50 flex items-start justify-end pr-2 pt-1">
-                <span className="text-[11px] text-gray-400 font-medium">{t}</span>
-              </div>
-            ))}
-          </div>
+      {/* ── MONTH GRID (TimeTree style) ── */}
+      <div className="flex-1 overflow-auto bg-white flex flex-col">
+        {/* Weekday header */}
+        <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50/80 sticky top-0 z-10">
+          {WEEK_DAYS_SHORT.map((d, i) => (
+            <div key={d} className={`py-2 text-center text-xs font-bold uppercase tracking-wider ${i === 0 ? "text-rose-400" : i === 6 ? "text-sky-400" : "text-gray-400"}`}>
+              {d}
+            </div>
+          ))}
+        </div>
 
-          {/* Day columns */}
-          <div className={`flex-1 grid`} style={{ gridTemplateColumns: `repeat(${dayDates.length}, minmax(0, 1fr))` }}>
-            {dayDates.map((date) => {
-              const dStr = toDateStr(date);
-              const isToday = dStr === todayStr;
-              return (
-                <div key={dStr} className="border-r border-gray-100 last:border-r-0">
-                  {/* Day header */}
-                  <div className={`h-12 border-b border-gray-100 flex flex-col items-center justify-center sticky top-0 z-10 ${isToday ? "bg-indigo-50" : "bg-white"}`}>
-                    <span className={`text-xs font-semibold uppercase tracking-wider ${isToday ? "text-indigo-500" : "text-gray-400"}`}>
-                      {WEEK_DAYS_SHORT[date.getDay()]}
-                    </span>
-                    <span className={`text-lg font-bold leading-tight ${isToday ? "text-indigo-600" : "text-gray-800"}`}>
-                      {date.getDate()}
-                    </span>
-                  </div>
-
-                  {/* Time rows */}
-                  {TIME_SLOTS.map(time => {
-                    const slotSessions = sessionsAt(dStr, time);
+        {/* Day cells */}
+        <div className="grid grid-cols-7 flex-1 auto-rows-fr">
+          {monthDates.map((date) => {
+            const dStr = toDateStr(date);
+            const isToday = dStr === todayStr;
+            const inMonth = date.getMonth() === currentMonth;
+            const daySessions = sessionsOnDay(dStr);
+            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+            return (
+              <button
+                key={dStr}
+                onClick={() => setDayModal(dStr)}
+                className={`text-left border-b border-r border-gray-100 p-1 min-h-[84px] flex flex-col gap-0.5 transition-colors hover:bg-indigo-50/50 ${!inMonth ? "bg-gray-50/60" : isWeekend ? "bg-gray-50/30" : ""}`}
+              >
+                <div className="flex items-center justify-center">
+                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ${isToday ? "bg-indigo-600 text-white" : !inMonth ? "text-gray-300" : date.getDay() === 0 ? "text-rose-500" : date.getDay() === 6 ? "text-sky-500" : "text-gray-700"}`}>
+                    {date.getDate()}
+                  </span>
+                </div>
+                <div className="flex-1 flex flex-col gap-0.5 overflow-hidden">
+                  {daySessions.slice(0, 3).map((s) => {
+                    const c = getColor(s.psychologist_id);
                     return (
-                      <div key={time} className={`h-16 border-b border-gray-100 px-1 py-0.5 relative group ${slotSessions.length === 0 ? "hover:bg-indigo-50/40 cursor-pointer" : ""}`}
-                        onClick={() => { if (slotSessions.length === 0) { setFDate(dStr); setFTime(time); setShowModal(true); } }}>
-                        {slotSessions.map((s) => {
-                          const c = getColor(s.psychologist_id);
-                          return (
-                            <div
-                              key={s.id}
-                              className={`h-full rounded-md px-2 py-1 border-l-[3px] ${c.light} ${c.border} cursor-pointer hover:brightness-95 transition-all overflow-hidden`}
-                            >
-                              <p className={`text-[11px] font-bold truncate ${c.text}`}>{s.patients?.name || "—"}</p>
-                              <div className="flex items-center gap-1 mt-0.5">
-                                <span className="text-[10px] text-gray-500">{s.duration}min</span>
-                                {s.type === "teleconsulta" ? <Video className="w-2.5 h-2.5 text-gray-400" /> : <MapPin className="w-2.5 h-2.5 text-gray-400" />}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {slotSessions.length === 0 && (
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Plus className="w-3.5 h-3.5 text-indigo-400" />
-                          </div>
-                        )}
+                      <div key={s.id} className="flex items-center gap-1 rounded px-1 py-0.5 overflow-hidden" style={{ background: `${c.hex}22` }}>
+                        <span className="w-1 h-3 rounded-full shrink-0" style={{ background: c.hex }} />
+                        <span className="text-[10px] font-medium text-gray-700 truncate leading-none">
+                          {s.session_time.slice(0, 5)} {s.patients?.name?.split(" ")[0] || "—"}
+                        </span>
                       </div>
                     );
                   })}
+                  {daySessions.length > 3 && (
+                    <span className="text-[10px] font-semibold text-gray-400 px-1">+{daySessions.length - 3} mais</span>
+                  )}
                 </div>
-              );
-            })}
-          </div>
+              </button>
+            );
+          })}
         </div>
       </div>
+
+      {/* ── FLOATING ADD BUTTON ── */}
+      <button
+        onClick={() => openNewSession()}
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+        title="Nova sessão"
+      >
+        <Plus className="w-7 h-7" />
+      </button>
+
+      {/* ── DAY DETAIL MODAL ── */}
+      {dayModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setDayModal(null)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md sm:mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider">
+                  {new Date(`${dayModal}T00:00:00`).toLocaleDateString("pt-BR", { weekday: "long" })}
+                </p>
+                <h3 className="text-lg font-bold text-gray-900 capitalize">
+                  {new Date(`${dayModal}T00:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}
+                </h3>
+              </div>
+              <button onClick={() => setDayModal(null)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
+              {sessionsOnDay(dayModal).length === 0 && (
+                <div className="text-center py-10">
+                  <Calendar className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                  <p className="text-sm text-gray-400">Nenhuma sessão neste dia</p>
+                </div>
+              )}
+              {sessionsOnDay(dayModal).map((s) => {
+                const c = getColor(s.psychologist_id);
+                return (
+                  <div key={s.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors" style={{ background: `${c.hex}0d` }}>
+                    <div className="flex flex-col items-center justify-center w-12 shrink-0">
+                      <span className="text-sm font-bold text-gray-800">{s.session_time.slice(0, 5)}</span>
+                      <span className="text-[10px] text-gray-400">{s.duration}min</span>
+                    </div>
+                    <div className="w-1 self-stretch rounded-full" style={{ background: c.hex }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{s.patients?.name || "Paciente"}</p>
+                      <p className="text-xs text-gray-500 truncate flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.hex }} />
+                        {s.psychologists?.name || "—"}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {s.type === "teleconsulta" ? <Video className="w-4 h-4 text-gray-400" /> : <MapPin className="w-4 h-4 text-gray-400" />}
+                      <Badge variant={STATUS_CFG[s.status].variant}>{STATUS_CFG[s.status].label}</Badge>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="px-5 py-4 border-t border-gray-100">
+              <Button onClick={() => { openNewSession(dayModal); setDayModal(null); }} className="w-full gap-1.5 bg-indigo-600 hover:bg-indigo-700">
+                <Plus className="w-4 h-4" /> Agendar neste dia
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── COLOR PICKER MODAL ── */}
       {colorModal && (
