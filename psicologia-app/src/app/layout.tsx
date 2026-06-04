@@ -24,7 +24,7 @@ export default function RootLayout({
       <head>
         <meta charSet="utf-8" />
       </head>
-      <body className="min-h-full bg-gray-50">{children}</body>
+      <body className="min-h-full bg-gray-50" suppressHydrationWarning>{children}</body>
     </html>
   );
 }
