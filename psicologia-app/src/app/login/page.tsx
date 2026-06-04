@@ -2,22 +2,47 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Eye, EyeOff, Shield } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { signIn, resetPassword } from "@/lib/supabase/auth";
+import { toast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    if (!email || !password) { setError("Preencha e-mail e senha."); return; }
     setLoading(true);
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 1000);
+    try {
+      await signIn(email, password);
+      router.replace("/dashboard");
+    } catch (err) {
+      const msg = (err as { message?: string })?.message || "";
+      if (msg.includes("Invalid login")) setError("E-mail ou senha incorretos.");
+      else if (msg.includes("Email not confirmed")) setError("Confirme seu e-mail antes de entrar.");
+      else setError("Não foi possível entrar. Tente novamente.");
+      setLoading(false);
+    }
+  };
+
+  const handleForgot = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!email) { toast.warning("Informe seu e-mail", "Digite o e-mail no campo acima e clique novamente."); return; }
+    try {
+      await resetPassword(email);
+      toast.success("E-mail enviado", "Verifique sua caixa de entrada para redefinir a senha.");
+    } catch {
+      toast.error("Erro", "Não foi possível enviar o e-mail de redefinição.");
+    }
   };
 
   return (
@@ -44,6 +69,12 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
+              {error && (
+                <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {error}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Email
@@ -54,7 +85,9 @@ export default function LoginPage() {
                     type="email"
                     placeholder="seu@email.com"
                     className="pl-10"
-                    defaultValue="maria@clinica.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                   />
                 </div>
               </div>
@@ -69,7 +102,9 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     className="pl-10 pr-10"
-                    defaultValue="12345678"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
@@ -86,9 +121,9 @@ export default function LoginPage() {
                   <input type="checkbox" className="rounded border-gray-300 text-indigo-600" defaultChecked />
                   <span className="text-gray-600">Lembrar de mim</span>
                 </label>
-                <a href="#" className="text-indigo-600 hover:text-indigo-700 font-medium">
+                <button type="button" onClick={handleForgot} className="text-indigo-600 hover:text-indigo-700 font-medium">
                   Esqueceu a senha?
-                </a>
+                </button>
               </div>
 
               <Button type="submit" className="w-full h-11" disabled={loading}>

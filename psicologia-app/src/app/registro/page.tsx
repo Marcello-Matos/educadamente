@@ -2,27 +2,62 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Eye, EyeOff, Shield, User, Phone, ArrowLeft } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, Shield, User, Phone, ArrowLeft, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { signUp } from "@/lib/supabase/auth";
+import { createPsychologist } from "@/lib/supabase/patients";
+import { toast } from "@/hooks/use-toast";
 
 export default function RegistroPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [error, setError] = useState("");
 
-  const handleRegister = (e: React.FormEvent) => {
+  // form
+  const [name, setName] = useState("");
+  const [crp, setCrp] = useState("");
+  const [phone, setPhone] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [accepted, setAccepted] = useState(false);
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     if (step === 1) {
+      if (!name || !crp || !phone) { setError("Preencha nome, CRP e telefone."); return; }
       setStep(2);
       return;
     }
+    if (!email || !password) { setError("Preencha e-mail e senha."); return; }
+    if (password.length < 8) { setError("A senha deve ter ao menos 8 caracteres."); return; }
+    if (password !== confirm) { setError("As senhas não coincidem."); return; }
+    if (!accepted) { setError("Você precisa aceitar os termos."); return; }
+
     setLoading(true);
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 1500);
+    try {
+      const result = await signUp(email, password, { name, crp, phone, specialty });
+      // Cria o registro do profissional (aparece na agenda, chat, etc.)
+      try { await createPsychologist({ name, crp, email, phone, specialties: specialty ? [specialty] : [] }); } catch { /* ignora se CRP duplicado */ }
+
+      if (result.session) {
+        router.replace("/dashboard");
+      } else {
+        toast.success("Conta criada!", "Confirme seu e-mail para ativar o acesso.");
+        router.replace("/login");
+      }
+    } catch (err) {
+      const msg = (err as { message?: string })?.message || "";
+      if (msg.includes("already registered")) setError("Este e-mail já está cadastrado.");
+      else setError("Não foi possível criar a conta. Tente novamente.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -65,6 +100,12 @@ export default function RegistroPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-4">
+              {error && (
+                <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {error}
+                </div>
+              )}
               {step === 1 ? (
                 <>
                   <div>
@@ -77,7 +118,8 @@ export default function RegistroPage() {
                         type="text"
                         placeholder="Seu nome completo"
                         className="pl-10"
-                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                       />
                     </div>
                   </div>
@@ -89,7 +131,8 @@ export default function RegistroPage() {
                     <Input
                       type="text"
                       placeholder="Ex: 06/123456"
-                      required
+                      value={crp}
+                      onChange={(e) => setCrp(e.target.value)}
                     />
                   </div>
 
@@ -103,7 +146,8 @@ export default function RegistroPage() {
                         type="tel"
                         placeholder="(00) 00000-0000"
                         className="pl-10"
-                        required
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
                       />
                     </div>
                   </div>
@@ -112,7 +156,11 @@ export default function RegistroPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       Especialidade
                     </label>
-                    <select className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <select
+                      value={specialty}
+                      onChange={(e) => setSpecialty(e.target.value)}
+                      className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
                       <option value="">Selecione sua especialidade</option>
                       <option value="tcc">TCC - Terapia Cognitivo Comportamental</option>
                       <option value="psicanalise">Psicanálise</option>
@@ -137,7 +185,8 @@ export default function RegistroPage() {
                         type="email"
                         placeholder="seu@email.com"
                         className="pl-10"
-                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
                   </div>
@@ -152,7 +201,8 @@ export default function RegistroPage() {
                         type={showPassword ? "text" : "password"}
                         placeholder="Mínimo 8 caracteres"
                         className="pl-10 pr-10"
-                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                       />
                       <button
                         type="button"
@@ -177,7 +227,8 @@ export default function RegistroPage() {
                         type={showPassword ? "text" : "password"}
                         placeholder="Repita a senha"
                         className="pl-10"
-                        required
+                        value={confirm}
+                        onChange={(e) => setConfirm(e.target.value)}
                       />
                     </div>
                   </div>
@@ -186,7 +237,8 @@ export default function RegistroPage() {
                     <input
                       type="checkbox"
                       className="rounded border-gray-300 text-indigo-600 mt-0.5"
-                      required
+                      checked={accepted}
+                      onChange={(e) => setAccepted(e.target.checked)}
                     />
                     <span className="text-xs text-gray-600">
                       Li e aceito os{" "}

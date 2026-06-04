@@ -10,12 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
 import { ShortcutsModal } from "@/components/ui/shortcuts-modal";
+import { useAuth } from "@/hooks/use-auth";
+import { signOut } from "@/lib/supabase/auth";
 
 const notifications: { id: number; icon: typeof Calendar; color: string; title: string; sub: string; time: string; read: boolean }[] = [];
 
 export function Header() {
   const router = useRouter();
   const { theme, toggle, isDark } = useTheme();
+  const { user } = useAuth();
   const [showDropdown,   setShowDropdown]   = useState(false);
   const [showNotif,      setShowNotif]      = useState(false);
   const [showShortcuts,  setShowShortcuts]  = useState(false);
@@ -23,7 +26,15 @@ export function Header() {
 
   const unread = notifs.filter((n) => !n.read).length;
 
-  const handleLogout = () => { setShowDropdown(false); router.push("/login"); };
+  const userName = (user?.user_metadata?.name as string) || user?.email?.split("@")[0] || "Usuário";
+  const userCrp = (user?.user_metadata?.crp as string) || "";
+  const userEmail = user?.email || "";
+
+  const handleLogout = async () => {
+    setShowDropdown(false);
+    try { await signOut(); } catch { /* ignore */ }
+    router.replace("/login");
+  };
 
   const markAllRead = () => setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
 
@@ -149,8 +160,8 @@ export function Header() {
               className="flex items-center gap-2 sm:gap-3 hover:bg-gray-50 rounded-lg px-2 py-1.5 transition-colors"
             >
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-gray-900">Dra. Maria Santos</p>
-                <p className="text-xs text-gray-500">CRP 06/123456</p>
+                <p className="text-sm font-medium text-gray-900">{userName}</p>
+                {userCrp && <p className="text-xs text-gray-500">{userCrp}</p>}
               </div>
               <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center">
                 <User className="w-5 h-5 text-indigo-600" />
@@ -163,8 +174,8 @@ export function Header() {
                 <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />
                 <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl border border-gray-200 shadow-lg z-50 py-2 animate-fade-in">
                   <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">Dra. Maria Santos</p>
-                    <p className="text-xs text-gray-500">maria@clinica.com</p>
+                    <p className="text-sm font-medium text-gray-900">{userName}</p>
+                    <p className="text-xs text-gray-500">{userEmail}</p>
                   </div>
                   <button
                     onClick={() => { setShowDropdown(false); router.push("/configuracoes"); }}
