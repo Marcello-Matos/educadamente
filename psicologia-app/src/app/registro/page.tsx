@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { signUp } from "@/lib/supabase/auth";
-import { createPsychologist } from "@/lib/supabase/patients";
+import { createPsychologist, checkCrpExists } from "@/lib/supabase/patients";
 import { createSystemUser } from "@/lib/supabase/users";
 import { toast } from "@/hooks/use-toast";
 
@@ -42,11 +42,19 @@ export default function RegistroPage() {
     if (password !== confirm) { setError("As senhas não coincidem."); return; }
     if (!accepted) { setError("Você precisa aceitar os termos."); return; }
 
+    // Verifica se o CRP já existe antes de criar a conta
     setLoading(true);
     try {
+      const crpExists = await checkCrpExists(crp.trim());
+      if (crpExists) {
+        setError("Este CRP já está cadastrado. Use um registro profissional diferente.");
+        setLoading(false);
+        return;
+      }
+
       const result = await signUp(email, password, { name, crp, phone, specialty });
       // Cria o registro do profissional (aparece na agenda, chat, etc.)
-      try { await createPsychologist({ name, crp, email, phone, specialties: specialty ? [specialty] : [] }); } catch { /* ignora se CRP duplicado */ }
+      await createPsychologist({ name, crp, email, phone, specialties: specialty ? [specialty] : [] });
       // Cria o usuário do sistema (aparece na página Usuários)
       try { await createSystemUser({ name, email, phone, role: crp ? `Psicólogo - ${crp}` : "Psicólogo", profileId: "", status: "ativo" }); } catch { /* ignora se já existe */ }
 
@@ -59,6 +67,7 @@ export default function RegistroPage() {
     } catch (err) {
       const msg = (err as { message?: string })?.message || "";
       if (msg.includes("already registered")) setError("Este e-mail já está cadastrado.");
+      else if (msg.includes("duplicate key")) setError("Este CRP já está cadastrado.");
       else setError("Não foi possível criar a conta. Tente novamente.");
       setLoading(false);
     }

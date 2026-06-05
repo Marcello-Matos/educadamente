@@ -1,6 +1,11 @@
 import { supabase } from "@/lib/supabase/client";
 import { CreatePatientInput, Patient, Psychologist } from "@/lib/supabase/types";
 
+export async function checkCrpExists(crp: string): Promise<boolean> {
+  const { data } = await supabase.from("psychologists").select("id").eq("crp", crp).maybeSingle();
+  return !!data;
+}
+
 export async function getPsychologists() {
   const { data, error } = await supabase
     .from("psychologists")
