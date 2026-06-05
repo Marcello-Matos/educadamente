@@ -32,11 +32,12 @@ export default function RegistroPage() {
     e.preventDefault();
     setError("");
     if (step === 1) {
-      if (!name || !crp || !phone) { setError("Preencha nome, CRP e telefone."); return; }
+      if (!name || !email || !crp || !phone) { setError("Preencha nome, e-mail, CRP e telefone."); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("Informe um e-mail válido."); return; }
       setStep(2);
       return;
     }
-    if (!email || !password) { setError("Preencha e-mail e senha."); return; }
+    if (!password) { setError("Crie uma senha."); return; }
     if (password.length < 8) { setError("A senha deve ter ao menos 8 caracteres."); return; }
     if (password !== confirm) { setError("As senhas não coincidem."); return; }
     if (!accepted) { setError("Você precisa aceitar os termos."); return; }
@@ -129,6 +130,24 @@ export default function RegistroPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Email *
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        type="email"
+                        placeholder="seu@email.com"
+                        className="pl-10"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        autoComplete="email"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Você usará este e-mail para acessar o sistema.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       CRP (Registro Profissional) *
                     </label>
                     <Input
@@ -178,20 +197,9 @@ export default function RegistroPage() {
                 </>
               ) : (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Email *
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input
-                        type="email"
-                        placeholder="seu@email.com"
-                        className="pl-10"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
+                  <div className="flex items-center gap-2 rounded-lg bg-indigo-50 border border-indigo-100 px-3 py-2 text-sm text-indigo-700">
+                    <Mail className="w-4 h-4 shrink-0" />
+                    <span>Conta: <strong>{email}</strong></span>
                   </div>
 
                   <div>
