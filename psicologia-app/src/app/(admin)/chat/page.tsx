@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase/client";
 import { getTeamMessages, sendTeamMessage } from "@/lib/supabase/chat";
 import { getPsychologists, createPsychologist } from "@/lib/supabase/patients";
+import { createSystemUser } from "@/lib/supabase/users";
 import { TeamMessage, Psychologist } from "@/lib/supabase/types";
 import { toast } from "@/hooks/use-toast";
 
@@ -78,6 +79,17 @@ export default function ChatPage() {
     setRegSaving(true);
     try {
       const novo = await createPsychologist({ name: regName.trim(), crp: regCrp.trim() });
+      // Também cria o usuário do sistema (aparece na página Usuários)
+      try {
+        await createSystemUser({
+          name: regName.trim(),
+          email: `${regCrp.trim().replace(/[^a-zA-Z0-9]/g, "")}@placeholder.local`,
+          phone: "",
+          role: `Psicólogo - ${regCrp.trim()}`,
+          profileId: "",
+          status: "ativo",
+        });
+      } catch { /* ignora se falhar — o profissional já foi criado */ }
       setPsych(prev => [...prev, novo].sort((a, b) => a.name.localeCompare(b.name)));
       toast.success("Profissional cadastrado", novo.name);
       setShowRegister(false);
@@ -118,7 +130,13 @@ export default function ChatPage() {
           <p className="text-sm text-gray-500 mt-1 mb-5">Selecione seu perfil para entrar no chat da equipe.</p>
           <div className="space-y-2">
             {psychologists.length === 0 && !showRegister && (
-              <p className="text-sm text-gray-400 py-2">Nenhum profissional cadastrado ainda. Cadastre o primeiro abaixo.</p>
+              <div className="text-sm text-gray-500 py-3 px-3 rounded-lg bg-gray-50 border border-gray-100">
+                <p className="font-medium text-gray-700 mb-1">Nenhum profissional cadastrado</p>
+                <p className="text-xs leading-relaxed">
+                  Cadastre profissionais na página <strong>Usuários</strong> (ligando "Profissional da clínica" e informando o CRP). Eles aparecerão aqui automaticamente.
+                </p>
+                <p className="text-xs text-gray-400 mt-1">Ou use o atalho abaixo para cadastrar rapidamente.</p>
+              </div>
             )}
             {psychologists.map(p => (
               <button key={p.id} onClick={() => pickIdentity(p)} className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors text-left">
