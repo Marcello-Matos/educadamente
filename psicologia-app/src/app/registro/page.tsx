@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { signUp } from "@/lib/supabase/auth";
 import { createPsychologist } from "@/lib/supabase/patients";
+import { createSystemUser } from "@/lib/supabase/users";
 import { toast } from "@/hooks/use-toast";
 
 export default function RegistroPage() {
@@ -45,6 +46,8 @@ export default function RegistroPage() {
       const result = await signUp(email, password, { name, crp, phone, specialty });
       // Cria o registro do profissional (aparece na agenda, chat, etc.)
       try { await createPsychologist({ name, crp, email, phone, specialties: specialty ? [specialty] : [] }); } catch { /* ignora se CRP duplicado */ }
+      // Cria o usuário do sistema (aparece na página Usuários)
+      try { await createSystemUser({ name, email, phone, role: crp ? `Psicólogo - ${crp}` : "Psicólogo", profileId: "", status: "ativo" }); } catch { /* ignora se já existe */ }
 
       if (result.session) {
         router.replace("/dashboard");
