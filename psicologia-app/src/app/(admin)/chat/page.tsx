@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase/client";
 import { getTeamMessages, sendTeamMessage } from "@/lib/supabase/chat";
-import { getPsychologists, createPsychologist } from "@/lib/supabase/patients";
+import { getPsychologists, createPsychologist, upsertPsychologistByEmail } from "@/lib/supabase/patients";
 import { createSystemUser } from "@/lib/supabase/users";
 import { TeamMessage, Psychologist } from "@/lib/supabase/types";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
 
 const IDENTITY_KEY = "psi_chat_identity";
@@ -28,6 +29,7 @@ function fmtTime(iso: string) {
 }
 
 export default function ChatPage() {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<TeamMessage[]>([]);
   const [psychologists, setPsych] = useState<Psychologist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,28 @@ export default function ChatPage() {
     if (stored) setIdentity(JSON.parse(stored));
 
     Promise.all([getTeamMessages(), getPsychologists()])
-      .then(([m, ps]) => { setMessages(m); setPsych(ps); })
+      .then(([m, ps]) => {
+        setMessages(m);
+        setPsych(ps);
+        // Se usuario logado tem dados de profissional e nao ha profissionais, criar automaticamente
+        if (ps.length === 0 && user) {
+          const meta = user.user_metadata;
+          const name = (meta?.name as string) || user.email?.split("@")[0] || "";
+          const crp = (meta?.crp as string) || "";
+          const phone = (meta?.phone as string) || "";
+          if (name && crp && user.email) {
+            upsertPsychologistByEmail({ name, crp, email: user.email, phone })
+              .then(p => {
+                setPsych([p]);
+                const id = { id: p.id, name: p.name };
+                setIdentity(id);
+                localStorage.setItem(IDENTITY_KEY, JSON.stringify(id));
+                toast.success("Profissional vinculado", name);
+              })
+              .catch(() => {});
+          }
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
 
@@ -62,7 +85,7 @@ export default function ChatPage() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
