@@ -83,8 +83,13 @@ export default function ChatPage() {
       setShowRegister(false);
       setRegName(""); setRegCrp("");
       pickIdentity(novo);
-    } catch {
-      toast.error("Erro ao cadastrar", "O CRP/registro pode já existir, ou a tabela não está acessível.");
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      if (code === "23505") {
+        toast.error("CRP já cadastrado", "Já existe um profissional com este CRP. Use outro registro.");
+      } else {
+        toast.error("Erro ao cadastrar", "Não foi possível salvar. Verifique sua conexão com o Supabase.");
+      }
     } finally { setRegSaving(false); }
   }
 
