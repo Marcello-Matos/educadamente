@@ -6,6 +6,7 @@ import {
   getProfiles, createProfile, updateProfile, deleteProfile, seedProfilesIfEmpty,
   getSystemUsers, createSystemUser, updateSystemUser, deleteSystemUser,
 } from "@/lib/supabase/users";
+import { upsertPsychologistByEmail, deletePsychologistByEmail } from "@/lib/supabase/patients";
 import { toast } from "@/hooks/use-toast";
 import {
   UserCog,
@@ -33,6 +34,7 @@ import {
   Users,
   Copy,
   AlertTriangle,
+  Award,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -324,6 +326,8 @@ export default function UsuariosPage() {
   const [formRole, setFormRole] = useState("");
   const [formProfileId, setFormProfileId] = useState("");
   const [formStatus, setFormStatus] = useState<"ativo" | "inativo">("ativo");
+  const [formCrp, setFormCrp] = useState("");
+  const [isProfessional, setIsProfessional] = useState(true);
   const [formPassword, setFormPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [formUserPerms, setFormUserPerms] = useState<string[]>([]);
@@ -388,6 +392,7 @@ export default function UsuariosPage() {
   const resetUserForm = () => {
     setFormName(""); setFormEmail(""); setFormPhone("");
     setFormRole(""); setFormProfileId(""); setFormStatus("ativo");
+    setFormCrp(""); setIsProfessional(true);
     setFormPassword(""); setShowPassword(false);
     setFormUserPerms([]); setUserExpandedGroups([]); setShowUserPerms(false);
   };
@@ -405,7 +410,7 @@ export default function UsuariosPage() {
   };
 
   // ─── OPEN EDIT USER ───
-  const openEditUser = (u: SystemUser) => {
+  const openEditUser = async (u: SystemUser) => {
     setSelectedUserId(u.id);
     setFormName(u.name); setFormEmail(u.email); setFormPhone(u.phone);
     setFormRole(u.role); setFormProfileId(u.profileId); setFormStatus(u.status);
@@ -413,6 +418,10 @@ export default function UsuariosPage() {
     const prof = profiles.find(p => p.id === u.profileId);
     setFormUserPerms(prof ? [...prof.permissions] : []);
     setUserExpandedGroups([]); setShowUserPerms(false);
+    // buscar profissional existente pelo e-mail
+    const { data: psy } = await supabase.from("psychologists").select("crp").eq("email", u.email).maybeSingle();
+    if (psy?.crp) { setFormCrp(psy.crp); setIsProfessional(true); }
+    else { setFormCrp(""); setIsProfessional(false); }
     setModal("edit-user");
   };
 
@@ -421,15 +430,30 @@ export default function UsuariosPage() {
     if (!formName || !formEmail || !formRole || !formProfileId) return;
     const payload = { name: formName, email: formEmail, phone: formPhone, role: formRole, profileId: formProfileId, status: formStatus };
     try {
+      let savedUser: SystemUser;
       if (modal === "create-user") {
-        const nu = await createSystemUser(payload);
-        setUsers((prev) => [...prev, nu]);
+        savedUser = await createSystemUser(payload);
+        setUsers((prev) => [...prev, savedUser]);
         toast.success("Usuário criado", formName);
       } else if (modal === "edit-user" && selectedUserId) {
-        const up = await updateSystemUser(selectedUserId, payload);
-        setUsers((prev) => prev.map((u) => (u.id === selectedUserId ? up : u)));
+        savedUser = await updateSystemUser(selectedUserId, payload);
+        setUsers((prev) => prev.map((u) => (u.id === selectedUserId ? savedUser : u)));
         toast.success("Usuário atualizado");
+      } else { return; }
+
+      // sincronizar profissional
+      if (isProfessional && formCrp.trim()) {
+        try {
+          await upsertPsychologistByEmail({ name: formName, crp: formCrp.trim(), email: formEmail, phone: formPhone });
+        } catch (err) {
+          const code = (err as { code?: string })?.code;
+          if (code === "23505") toast.warning("CRP duplicado", "Este CRP já existe em outro profissional.");
+          else toast.warning("Erro ao sincronizar profissional", "Verifique o CRP.");
+        }
+      } else {
+        await deletePsychologistByEmail(formEmail);
       }
+
       setModal(null);
       resetUserForm();
     } catch {
@@ -479,8 +503,10 @@ export default function UsuariosPage() {
     const target = deleteTarget;
     try {
       if (target.type === "user") {
+        const userEmail = users.find((u) => u.id === target.id)?.email;
         await deleteSystemUser(target.id);
         setUsers((prev) => prev.filter((u) => u.id !== target.id));
+        if (userEmail) await deletePsychologistByEmail(userEmail);
       } else {
         await deleteProfile(target.id);
         setProfiles((prev) => prev.filter((p) => p.id !== target.id));
@@ -622,6 +648,40 @@ export default function UsuariosPage() {
                   <Input value={formRole} onChange={(e) => setFormRole(e.target.value)} placeholder="Ex: Nutricionista, Psicóloga - CRP ..." className="pl-10" />
                 </div>
               </div>
+
+              {/* Toggle profissional + CRP */}
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-800">Profissional da clínica</label>
+                  <p className="text-xs text-gray-500">Aparece na agenda, chat e lista de psicólogos.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsProfessional(!isProfessional)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isProfessional ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isProfessional ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              {isProfessional && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Registro Profissional (CRP) *
+                  </label>
+                  <div className="relative">
+                    <Award className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      value={formCrp}
+                      onChange={(e) => setFormCrp(e.target.value)}
+                      placeholder="Ex: 06/123456"
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Necessário para aparecer na agenda e chat.</p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Perfil de Acesso *</label>
                 <select
