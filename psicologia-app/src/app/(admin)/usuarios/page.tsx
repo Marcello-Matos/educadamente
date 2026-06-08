@@ -318,6 +318,7 @@ export default function UsuariosPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "user" | "profile"; id: string } | null>(null);
+  const [dbError, setDbError] = useState<string | null>(null);
 
   // ─── Form states ───
   const [formName, setFormName] = useState("");
@@ -348,7 +349,15 @@ export default function UsuariosPage() {
         setProfiles(seeded);
         const us = await getSystemUsers();
         setUsers(us);
-      } catch {
+        setDbError(null);
+      } catch (err) {
+        const msg = (err as { message?: string })?.message || "";
+        const code = (err as { code?: string })?.code || "";
+        if (code === "42P01" || msg.includes("does not exist")) {
+          setDbError("as_tabelas_nao_existem");
+        } else {
+          setDbError(msg || "erro_desconhecido");
+        }
         toast.error("Erro ao carregar dados", "Rode o arquivo supabase/users.sql no Supabase.");
       } finally {
         setLoading(false);
@@ -1093,6 +1102,30 @@ export default function UsuariosPage() {
           <span className="font-medium text-red-700">Acesso Master</span>
         </div>
       </div>
+
+      {/* Banner de erro de banco */}
+      {dbError && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-800">
+              <p className="font-semibold">As tabelas de usuários ainda não existem no Supabase</p>
+              <p className="mt-1">
+                Os perfis de acesso não aparecem porque as tabelas <code className="bg-amber-100 px-1 rounded">access_profiles</code> e <code className="bg-amber-100 px-1 rounded">system_users</code> não foram criadas.
+              </p>
+              <p className="mt-2 font-medium">Como resolver (uma única vez):</p>
+              <ol className="list-decimal list-inside mt-1 space-y-0.5">
+                <li>Abra o <strong>SQL Editor</strong> no painel do Supabase</li>
+                <li>Cole e rode o conteúdo do arquivo <code className="bg-amber-100 px-1 rounded">supabase/users.sql</code></li>
+                <li>Recarregue esta página — os perfis padrão serão criados automaticamente</li>
+              </ol>
+              {dbError !== "as_tabelas_nao_existem" && (
+                <p className="mt-2 text-xs text-amber-600">Detalhe técnico: {dbError}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-full sm:w-fit overflow-x-auto">
