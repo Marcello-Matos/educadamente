@@ -89,10 +89,18 @@ export async function getSystemUsers(): Promise<SystemUserRow[]> {
 }
 
 export async function createSystemUser(input: { name: string; email: string; phone: string; role: string; profileId: string; permissions?: string[]; status: "ativo" | "inativo"; }): Promise<SystemUserRow> {
-  const { data, error } = await supabase
-    .from("system_users")
-    .insert({ name: input.name, email: input.email, phone: input.phone, role: input.role, profile_id: input.profileId || null, permissions: input.permissions ?? [], status: input.status })
-    .select("*").single();
+  const insertData: Record<string, unknown> = {
+    name: input.name, email: input.email, phone: input.phone, role: input.role,
+    profile_id: input.profileId || null, status: input.status,
+  };
+  if (input.permissions !== undefined) insertData.permissions = input.permissions;
+  let { data, error } = await supabase.from("system_users").insert(insertData).select("*").single();
+  // fallback: se a coluna permissions ainda nao existir no banco, tenta sem ela
+  if (error && (error.message?.includes("permissions") || error.message?.includes("column") || error.code === "42703")) {
+    const { permissions: _, ...fallbackData } = insertData;
+    const res2 = await supabase.from("system_users").insert(fallbackData).select("*").single();
+    data = res2.data; error = res2.error;
+  }
   if (error) throw error;
   return mapUser(data as DbUser);
 }
@@ -103,10 +111,13 @@ export async function updateSystemUser(id: string, input: { name: string; email:
     profile_id: input.profileId || null, status: input.status,
   };
   if (input.permissions !== undefined) patch.permissions = input.permissions;
-  const { data, error } = await supabase
-    .from("system_users")
-    .update(patch)
-    .eq("id", id).select("*").single();
+  let { data, error } = await supabase.from("system_users").update(patch).eq("id", id).select("*").single();
+  // fallback: se a coluna permissions ainda nao existir no banco, tenta sem ela
+  if (error && (error.message?.includes("permissions") || error.message?.includes("column") || error.code === "42703")) {
+    const { permissions: _, ...fallbackPatch } = patch;
+    const res2 = await supabase.from("system_users").update(fallbackPatch).eq("id", id).select("*").single();
+    data = res2.data; error = res2.error;
+  }
   if (error) throw error;
   return mapUser(data as DbUser);
 }

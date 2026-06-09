@@ -212,7 +212,7 @@ export default function ChatPage() {
         </div>
         {identity && (
           <button
-            onClick={() => { setIdentity(null); localStorage.removeItem(IDENTITY_KEY); }}
+            onClick={() => { setIdentity(null); setMessages([]); localStorage.removeItem(IDENTITY_KEY); }}
             title="Trocar perfil / cadastrar outro"
             className="flex items-center gap-2 rounded-full hover:bg-white/15 px-2 py-1 transition-colors"
           >

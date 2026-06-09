@@ -510,8 +510,10 @@ export default function UsuariosPage() {
 
       setModal(null);
       resetUserForm();
-    } catch {
-      toast.error("Erro ao salvar usuário", "Verifique a conexão com o Supabase.");
+    } catch (err) {
+      console.error("[saveUser] erro:", err);
+      const msg = (err as { message?: string })?.message || String(err);
+      toast.error("Erro ao salvar usuário", msg || "Verifique a conexão com o Supabase.");
     }
   };
 
