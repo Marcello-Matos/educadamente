@@ -7,6 +7,7 @@ import {
   getSystemUsers, createSystemUser, updateSystemUser, deleteSystemUser,
 } from "@/lib/supabase/users";
 import { upsertPsychologistByEmail, deletePsychologistByEmail } from "@/lib/supabase/patients";
+import { PRO_PALETTE } from "@/lib/palette";
 import { toast } from "@/hooks/use-toast";
 import {
   UserCog,
@@ -214,23 +215,6 @@ const allPermissionGroups: PermissionGroup[] = [
 
 const allPermissionIds = allPermissionGroups.flatMap((g) => g.permissions.map((p) => p.id));
 
-// ─── PALETA DE CORES DO PROFISSIONAL (estilo TimeTree) ───
-// Mantém os mesmos ids/cores usados na Agenda para refletir igual.
-const PRO_PALETTE: { id: string; hex: string }[] = [
-  { id: "indigo",  hex: "#6366f1" },
-  { id: "violet",  hex: "#8b5cf6" },
-  { id: "sky",     hex: "#0ea5e9" },
-  { id: "emerald", hex: "#10b981" },
-  { id: "teal",    hex: "#14b8a6" },
-  { id: "amber",   hex: "#f59e0b" },
-  { id: "orange",  hex: "#f97316" },
-  { id: "rose",    hex: "#f43f5e" },
-  { id: "pink",    hex: "#ec4899" },
-  { id: "fuchsia", hex: "#d946ef" },
-  { id: "lime",    hex: "#84cc16" },
-  { id: "cyan",    hex: "#06b6d4" },
-];
-
 // ─── INITIAL DATA ───
 const initialProfiles: Profile[] = [
   {
@@ -347,6 +331,7 @@ export default function UsuariosPage() {
   const [formStatus, setFormStatus] = useState<"ativo" | "inativo">("ativo");
   const [formCrp, setFormCrp] = useState("");
   const [formColor, setFormColor] = useState(PRO_PALETTE[0].id);
+  const [takenColors, setTakenColors] = useState<string[]>([]);
   const [isProfessional, setIsProfessional] = useState(true);
   const [formPassword, setFormPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -430,10 +415,25 @@ export default function UsuariosPage() {
     setProfilePerms([]); setExpandedGroups([]);
   };
 
+  // ─── CARREGAR CORES JÁ USADAS (exceto a do e-mail informado) ───
+  const loadTakenColors = async (excludeEmail?: string): Promise<string[]> => {
+    const { data } = await supabase.from("psychologists").select("email, color");
+    const taken = (data || [])
+      .filter((p) => p.color && p.email !== excludeEmail)
+      .map((p) => p.color as string);
+    setTakenColors(taken);
+    return taken;
+  };
+
+  const firstFreeColor = (taken: string[]) =>
+    PRO_PALETTE.find((c) => !taken.includes(c.id))?.id || PRO_PALETTE[0].id;
+
   // ─── OPEN CREATE USER ───
-  const openCreateUser = () => {
+  const openCreateUser = async () => {
     resetUserForm();
     setSelectedUserId(null);
+    const taken = await loadTakenColors();
+    setFormColor(firstFreeColor(taken));
     setModal("create-user");
   };
 
@@ -446,10 +446,12 @@ export default function UsuariosPage() {
     const prof = profiles.find(p => p.id === u.profileId);
     setFormUserPerms(prof ? [...prof.permissions] : []);
     setUserExpandedGroups([]); setShowUserPerms(false);
+    // cores usadas por outros profissionais (não bloqueia a cor atual deste)
+    const taken = await loadTakenColors(u.email);
     // buscar profissional existente pelo e-mail
     const { data: psy } = await supabase.from("psychologists").select("crp, color").eq("email", u.email).maybeSingle();
-    if (psy?.crp) { setFormCrp(psy.crp); setIsProfessional(true); setFormColor(psy.color || PRO_PALETTE[0].id); }
-    else { setFormCrp(""); setIsProfessional(false); setFormColor(PRO_PALETTE[0].id); }
+    if (psy?.crp) { setFormCrp(psy.crp); setIsProfessional(true); setFormColor(psy.color || firstFreeColor(taken)); }
+    else { setFormCrp(""); setIsProfessional(false); setFormColor(firstFreeColor(taken)); }
     setModal("edit-user");
   };
 
@@ -719,21 +721,24 @@ export default function UsuariosPage() {
                   <div className="flex flex-wrap gap-2">
                     {PRO_PALETTE.map((c) => {
                       const isSelected = formColor === c.id;
+                      const taken = takenColors.includes(c.id) && !isSelected;
                       return (
                         <button
                           key={c.id}
                           type="button"
-                          onClick={() => setFormColor(c.id)}
-                          title={c.id}
-                          className={`w-9 h-9 rounded-full transition-all flex items-center justify-center hover:scale-110 ${isSelected ? "ring-2 ring-offset-2 ring-gray-800" : ""}`}
+                          disabled={taken}
+                          onClick={() => !taken && setFormColor(c.id)}
+                          title={taken ? "Cor já usada por outro profissional" : c.id}
+                          className={`w-9 h-9 rounded-full transition-all flex items-center justify-center relative ${taken ? "opacity-20 cursor-not-allowed" : "hover:scale-110 cursor-pointer"} ${isSelected ? "ring-2 ring-offset-2 ring-gray-800" : ""}`}
                           style={{ background: c.hex }}
                         >
                           {isSelected && <Check className="w-4 h-4 text-white" />}
+                          {taken && <X className="w-4 h-4 text-white" />}
                         </button>
                       );
                     })}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Identifica este profissional nos eventos da agenda.</p>
+                  <p className="text-xs text-gray-500 mt-1">Cada profissional usa uma cor única. As cores apagadas já estão em uso.</p>
                 </div>
               )}
 

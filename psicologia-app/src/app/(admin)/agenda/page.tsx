@@ -13,25 +13,11 @@ import { getPatients, getPsychologists } from "@/lib/supabase/patients";
 import { getSessions, createSession } from "@/lib/supabase/sessions";
 import { createReminder } from "@/lib/supabase/reminders";
 import { Patient, Psychologist, Session } from "@/lib/supabase/types";
+import { PRO_PALETTE as PALETTE } from "@/lib/palette";
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────────────
 const TIME_SLOTS = ["07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
 const WEEK_DAYS_SHORT = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-
-const PALETTE: { id: string; bg: string; border: string; text: string; light: string; dot: string; hex: string }[] = [
-  { id: "indigo",  bg: "bg-indigo-500",  border: "border-indigo-500",  text: "text-indigo-700",  light: "bg-indigo-50",  dot: "#6366f1", hex: "#6366f1" },
-  { id: "violet",  bg: "bg-violet-500",  border: "border-violet-500",  text: "text-violet-700",  light: "bg-violet-50",  dot: "#8b5cf6", hex: "#8b5cf6" },
-  { id: "sky",     bg: "bg-sky-500",     border: "border-sky-500",     text: "text-sky-700",     light: "bg-sky-50",     dot: "#0ea5e9", hex: "#0ea5e9" },
-  { id: "emerald", bg: "bg-emerald-500", border: "border-emerald-500", text: "text-emerald-700", light: "bg-emerald-50", dot: "#10b981", hex: "#10b981" },
-  { id: "teal",    bg: "bg-teal-500",    border: "border-teal-500",    text: "text-teal-700",    light: "bg-teal-50",    dot: "#14b8a6", hex: "#14b8a6" },
-  { id: "amber",   bg: "bg-amber-500",   border: "border-amber-500",   text: "text-amber-700",   light: "bg-amber-50",   dot: "#f59e0b", hex: "#f59e0b" },
-  { id: "orange",  bg: "bg-orange-500",  border: "border-orange-500",  text: "text-orange-700",  light: "bg-orange-50",  dot: "#f97316", hex: "#f97316" },
-  { id: "rose",    bg: "bg-rose-500",    border: "border-rose-500",    text: "text-rose-700",    light: "bg-rose-50",    dot: "#f43f5e", hex: "#f43f5e" },
-  { id: "pink",    bg: "bg-pink-500",    border: "border-pink-500",    text: "text-pink-700",    light: "bg-pink-50",    dot: "#ec4899", hex: "#ec4899" },
-  { id: "fuchsia", bg: "bg-fuchsia-500", border: "border-fuchsia-500", text: "text-fuchsia-700", light: "bg-fuchsia-50", dot: "#d946ef", hex: "#d946ef" },
-  { id: "lime",    bg: "bg-lime-500",    border: "border-lime-500",    text: "text-lime-700",    light: "bg-lime-50",    dot: "#84cc16", hex: "#84cc16" },
-  { id: "cyan",    bg: "bg-cyan-500",    border: "border-cyan-500",    text: "text-cyan-700",    light: "bg-cyan-50",    dot: "#06b6d4", hex: "#06b6d4" },
-];
 
 const STATUS_CFG = {
   agendada:  { label: "Agendada",  variant: "default"      as const },
@@ -119,9 +105,10 @@ export default function AgendaPage() {
     return PALETTE.find(c => c.id === cid) || PALETTE[0];
   };
 
-  const takenColors = Object.entries(psyColors)
-    .filter(([k]) => k !== colorModal)
-    .map(([, v]) => v);
+  const takenColors = [
+    ...Object.entries(psyColors).filter(([k]) => k !== colorModal).map(([, v]) => v),
+    ...psychologists.filter(p => p.id !== colorModal && p.color).map(p => p.color as string),
+  ];
 
   const monthDates = getMonthMatrix(anchor);
   const currentMonth = anchor.getMonth();
