@@ -122,10 +122,14 @@ create table if not exists system_users (
   phone text,
   role text,
   profile_id uuid references access_profiles(id) on delete set null,
+  permissions text[] not null default '{}',
   status text not null default 'ativo',
   last_access text,
   created_at timestamptz not null default now()
 );
+
+-- Garante a coluna de permissões mesmo em bancos já existentes
+alter table system_users add column if not exists permissions text[] not null default '{}';
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- COLABORAÇÃO: TAREFAS, LEMBRETES, CHAT

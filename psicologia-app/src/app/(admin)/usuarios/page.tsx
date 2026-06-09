@@ -7,6 +7,7 @@ import {
   getSystemUsers, createSystemUser, updateSystemUser, deleteSystemUser,
 } from "@/lib/supabase/users";
 import { upsertPsychologistByEmail, deletePsychologistByEmail } from "@/lib/supabase/patients";
+import { createUserAccount } from "@/lib/supabase/auth";
 import { PRO_PALETTE } from "@/lib/palette";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -71,6 +72,7 @@ interface SystemUser {
   phone: string;
   role: string;
   profileId: string;
+  permissions: string[];
   status: "ativo" | "inativo";
   createdAt: string;
   lastAccess: string;
@@ -444,7 +446,8 @@ export default function UsuariosPage() {
     setFormRole(u.role); setFormProfileId(u.profileId); setFormStatus(u.status);
     setFormPassword(""); setShowPassword(false);
     const prof = profiles.find(p => p.id === u.profileId);
-    setFormUserPerms(prof ? [...prof.permissions] : []);
+    // prioriza permissões salvas no usuário; se vazio, usa as do perfil como padrão
+    setFormUserPerms(u.permissions?.length ? [...u.permissions] : (prof ? [...prof.permissions] : []));
     setUserExpandedGroups([]); setShowUserPerms(false);
     // cores usadas por outros profissionais (não bloqueia a cor atual deste)
     const taken = await loadTakenColors(u.email);
@@ -458,10 +461,31 @@ export default function UsuariosPage() {
   // ─── SAVE USER ───
   const saveUser = async () => {
     if (!formName || !formEmail || !formRole || !formProfileId) return;
-    const payload = { name: formName, email: formEmail, phone: formPhone, role: formRole, profileId: formProfileId, status: formStatus };
+    const perms = formUserPerms.length > 0 ? [...new Set(formUserPerms)] : [];
+    const payload = {
+      name: formName, email: formEmail, phone: formPhone, role: formRole,
+      profileId: formProfileId, permissions: perms, status: formStatus,
+    };
     try {
       let savedUser: SystemUser;
       if (modal === "create-user") {
+        // cria conta de login real (Supabase Auth) usando client temporário
+        if (formPassword && formPassword.length >= 8) {
+          try {
+            await createUserAccount(formEmail, formPassword, { name: formName, crp: formCrp, phone: formPhone });
+          } catch (err) {
+            const msg = (err as { message?: string })?.message || "";
+            if (msg.includes("already registered")) {
+              toast.warning("E-mail já cadastrado", "Use outro e-mail ou o usuário já tem login.");
+            } else {
+              toast.error("Erro ao criar login", msg);
+              return;
+            }
+          }
+        } else {
+          toast.warning("Senha obrigatória", "Informe uma senha de pelo menos 8 caracteres para criar o login.");
+          return;
+        }
         savedUser = await createSystemUser(payload);
         setUsers((prev) => [...prev, savedUser]);
         toast.success("Usuário criado", formName);

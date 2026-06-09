@@ -1,3 +1,4 @@
+import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 
 export interface SignUpMeta {
@@ -5,6 +6,23 @@ export interface SignUpMeta {
   crp?: string;
   phone?: string;
   specialty?: string;
+}
+
+// Cria uma conta de login (Supabase Auth) SEM afetar a sessão do admin logado.
+// Usa um client temporário que não persiste sessão no navegador.
+export async function createUserAccount(email: string, password: string, meta: SignUpMeta) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+  const temp = createClient(url, anon, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await temp.auth.signUp({
+    email,
+    password,
+    options: { data: meta },
+  });
+  if (error) throw error;
+  return data;
 }
 
 export async function signIn(email: string, password: string) {

@@ -16,6 +16,7 @@ export interface SystemUserRow {
   phone: string;
   role: string;
   profileId: string;
+  permissions: string[];
   status: "ativo" | "inativo";
   createdAt: string;
   lastAccess: string;
@@ -28,7 +29,7 @@ type DbProfile = {
 };
 type DbUser = {
   id: string; name: string; email: string; phone: string | null; role: string | null;
-  profile_id: string | null; status: string; last_access: string | null; created_at: string;
+  profile_id: string | null; permissions: string[] | null; status: string; last_access: string | null; created_at: string;
 };
 
 function mapProfile(p: DbProfile): ProfileRow {
@@ -41,7 +42,8 @@ function mapProfile(p: DbProfile): ProfileRow {
 function mapUser(u: DbUser): SystemUserRow {
   return {
     id: u.id, name: u.name, email: u.email, phone: u.phone ?? "", role: u.role ?? "",
-    profileId: u.profile_id ?? "", status: (u.status as "ativo" | "inativo") ?? "ativo",
+    profileId: u.profile_id ?? "", permissions: u.permissions ?? [],
+    status: (u.status as "ativo" | "inativo") ?? "ativo",
     createdAt: u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "",
     lastAccess: u.last_access ?? "Nunca",
   };
@@ -86,19 +88,24 @@ export async function getSystemUsers(): Promise<SystemUserRow[]> {
   return (data as DbUser[]).map(mapUser);
 }
 
-export async function createSystemUser(input: { name: string; email: string; phone: string; role: string; profileId: string; status: "ativo" | "inativo"; }): Promise<SystemUserRow> {
+export async function createSystemUser(input: { name: string; email: string; phone: string; role: string; profileId: string; permissions?: string[]; status: "ativo" | "inativo"; }): Promise<SystemUserRow> {
   const { data, error } = await supabase
     .from("system_users")
-    .insert({ name: input.name, email: input.email, phone: input.phone, role: input.role, profile_id: input.profileId || null, status: input.status })
+    .insert({ name: input.name, email: input.email, phone: input.phone, role: input.role, profile_id: input.profileId || null, permissions: input.permissions ?? [], status: input.status })
     .select("*").single();
   if (error) throw error;
   return mapUser(data as DbUser);
 }
 
-export async function updateSystemUser(id: string, input: { name: string; email: string; phone: string; role: string; profileId: string; status: "ativo" | "inativo"; }): Promise<SystemUserRow> {
+export async function updateSystemUser(id: string, input: { name: string; email: string; phone: string; role: string; profileId: string; permissions?: string[]; status: "ativo" | "inativo"; }): Promise<SystemUserRow> {
+  const patch: Record<string, unknown> = {
+    name: input.name, email: input.email, phone: input.phone, role: input.role,
+    profile_id: input.profileId || null, status: input.status,
+  };
+  if (input.permissions !== undefined) patch.permissions = input.permissions;
   const { data, error } = await supabase
     .from("system_users")
-    .update({ name: input.name, email: input.email, phone: input.phone, role: input.role, profile_id: input.profileId || null, status: input.status })
+    .update(patch)
     .eq("id", id).select("*").single();
   if (error) throw error;
   return mapUser(data as DbUser);
