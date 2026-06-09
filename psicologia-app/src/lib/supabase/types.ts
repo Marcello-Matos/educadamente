@@ -189,3 +189,34 @@ export type CreateTeamMessageInput = {
   author_name: string;
   content: string;
 };
+
+// ─── GRAVAÇÕES DE TELECONSULTA ───
+export interface SessionRecording {
+  id: string;
+  session_id: string | null;
+  psychologist_id: string | null;
+  patient_id: string | null;
+  storage_path: string;
+  public_url: string | null;
+  duration_seconds: number | null;
+  file_size_bytes: number | null;
+  mime_type: string;
+  status: "gravando" | "finalizada" | "erro";
+  started_at: string;
+  ended_at: string | null;
+  created_at: string;
+}
+
+export type CreateSessionRecordingInput = {
+  session_id?: string | null;
+  psychologist_id?: string | null;
+  patient_id?: string | null;
+  storage_path: string;
+  public_url?: string | null;
+  duration_seconds?: number | null;
+  file_size_bytes?: number | null;
+  mime_type?: string;
+  status?: "gravando" | "finalizada" | "erro";
+  started_at?: string;
+  ended_at?: string | null;
+};

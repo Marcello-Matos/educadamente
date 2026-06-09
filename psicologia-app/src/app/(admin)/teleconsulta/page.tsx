@@ -2,50 +2,33 @@
 
 
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 
 import {
-
   Video,
-
   VideoOff,
-
   Mic,
-
   MicOff,
-
   PhoneOff,
-
   MessageSquare,
-
   Paperclip,
-
   Monitor,
-
   Send,
-
   Shield,
-
   Clock,
-
   User,
-
   Plus,
-
   Copy,
-
   Check,
-
   ArrowLeft,
-
   Users,
-
   Circle,
-
   X,
-
   Briefcase,
-
+  Square,
+  Pause,
+  Play,
+  Save,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +38,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { Badge } from "@/components/ui/badge";
+import { createRecording, updateRecording, uploadVideoBlob } from "@/lib/supabase/recordings";
+import { toast } from "@/hooks/use-toast";
 
 
 
@@ -377,8 +362,17 @@ export default function TeleconsultaPage() {
   const [filterRole, setFilterRole] = useState<string>("todos");
 
   const [quickPatient, setQuickPatient] = useState("");
-
   const [quickProfessional, setQuickProfessional] = useState("");
+
+  // ─── GRAVAÇÃO DE TELA ───
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingId, setRecordingId] = useState<string | null>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingStartRef = useRef<number>(0);
 
 
 
@@ -522,6 +516,106 @@ export default function TeleconsultaPage() {
 
 
 
+  // ─── GRAVAÇÃO DE TELA ───
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "monitor" } as any,
+        audio: true,
+      });
+      streamRef.current = stream;
+
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
+          ? "video/webm;codecs=vp8"
+          : "video/webm";
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+      recordedChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      const fileName = `recording-${Date.now()}.webm`;
+
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+        const duration = recordingStartRef.current
+          ? Math.floor((Date.now() - recordingStartRef.current) / 1000)
+          : 0;
+
+        try {
+          const { path, publicUrl } = await uploadVideoBlob(blob, fileName);
+          if (recordingId) {
+            await updateRecording(recordingId, {
+              status: "finalizada",
+              storage_path: path,
+              public_url: publicUrl,
+              duration_seconds: duration,
+              file_size_bytes: blob.size,
+              ended_at: new Date().toISOString(),
+            });
+            toast.success("Gravação salva", `Vídeo de ${formatDuration(duration)} salvo no banco.`);
+          }
+        } catch (err) {
+          console.error("[recording] upload error:", err);
+          toast.error("Erro ao salvar gravação", "Não foi possível fazer upload do vídeo.");
+        }
+
+        // Limpa stream
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        mediaRecorderRef.current = null;
+      };
+
+      mediaRecorder.start(1000); // coleta a cada 1s
+      recordingStartRef.current = Date.now();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      // Timer de exibição
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+
+      // Cria registro no banco
+      const rec = await createRecording({
+        storage_path: fileName,
+        status: "gravando",
+        started_at: new Date().toISOString(),
+      });
+      setRecordingId(rec.id);
+      toast.success("Gravação iniciada", "A sessão está sendo gravada.");
+    } catch (err) {
+      console.error("[recording] start error:", err);
+      toast.error("Erro ao iniciar gravação", "Permissão de compartilhamento de tela negada ou não suportada.");
+    }
+  };
+
+  const stopRecording = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingTime(0);
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
+
+  function formatDuration(seconds: number) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
   // ─── INSIDE A ROOM ───
 
   if (activeRoomId && activeRoom) {
@@ -636,16 +730,17 @@ export default function TeleconsultaPage() {
 
 
 
-                  <div className="absolute top-4 left-4 bg-black/50 px-3 py-1.5 rounded-full">
-
-                    <span className="text-white text-sm font-mono flex items-center gap-1">
-
+                  <div className="absolute top-4 left-4 flex items-center gap-2">
+                    <span className="bg-black/50 px-3 py-1.5 rounded-full text-white text-sm font-mono flex items-center gap-1">
                       <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-
                       AO VIVO
-
                     </span>
-
+                    {isRecording && (
+                      <span className="bg-red-600/90 px-3 py-1.5 rounded-full text-white text-xs font-bold flex items-center gap-1 animate-pulse">
+                        <Circle className="w-2.5 h-2.5 fill-current" />
+                        REC {formatDuration(recordingTime)}
+                      </span>
+                    )}
                   </div>
 
 
@@ -687,9 +782,17 @@ export default function TeleconsultaPage() {
                   </Button>
 
                   <Button variant="secondary" size="icon" className="rounded-full w-12 h-12">
-
                     <Paperclip className="w-5 h-5" />
+                  </Button>
 
+                  <Button
+                    variant={isRecording ? "destructive" : "secondary"}
+                    size="icon"
+                    className="rounded-full w-12 h-12"
+                    onClick={isRecording ? stopRecording : startRecording}
+                    title={isRecording ? "Parar gravação" : "Gravar sessão"}
+                  >
+                    {isRecording ? <Square className="w-5 h-5" /> : <Circle className="w-5 h-5 text-red-500" />}
                   </Button>
 
                   <Button variant="destructive" size="icon" className="rounded-full w-12 h-12" onClick={() => endRoom(activeRoomId)}>

@@ -168,6 +168,23 @@ create table if not exists team_messages (
   created_at timestamptz not null default now()
 );
 
+-- Gravações de teleconsulta (vídeos salvos no Storage)
+create table if not exists session_recordings (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid references sessions(id) on delete set null,
+  psychologist_id uuid references psychologists(id) on delete set null,
+  patient_id uuid references patients(id) on delete set null,
+  storage_path text not null,
+  public_url text,
+  duration_seconds integer,
+  file_size_bytes integer,
+  mime_type text not null default 'video/webm',
+  status text not null default 'gravando',
+  started_at timestamptz not null default now(),
+  ended_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
 -- ─────────────────────────────────────────────────────────────────────────
 -- ÍNDICES
 -- ─────────────────────────────────────────────────────────────────────────
@@ -182,6 +199,7 @@ create index if not exists tasks_status_idx on tasks(status);
 create index if not exists tasks_due_date_idx on tasks(due_date);
 create index if not exists reminders_remind_at_idx on reminders(remind_at);
 create index if not exists team_messages_created_idx on team_messages(created_at);
+create index if not exists session_recordings_session_id_idx on session_recordings(session_id);
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- RLS (Row Level Security)
@@ -196,6 +214,12 @@ alter table system_users enable row level security;
 alter table tasks enable row level security;
 alter table reminders enable row level security;
 alter table team_messages enable row level security;
+alter table session_recordings enable row level security;
+
+-- Bucket para vídeos de teleconsulta
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('session-recordings', 'session-recordings', false, 524288000, array['video/webm', 'video/mp4', 'video/x-matroska'])
+on conflict (id) do update set allowed_mime_types = array['video/webm', 'video/mp4', 'video/x-matroska'];
 
 -- Políticas (cria para authenticated e anon). Recria de forma segura.
 do $$
@@ -203,7 +227,7 @@ declare
   t text;
   tbls text[] := array[
     'psychologists','patients','sessions','payments','clinical_forms',
-    'access_profiles','system_users','tasks','reminders','team_messages'
+    'access_profiles','system_users','tasks','reminders','team_messages','session_recordings'
   ];
 begin
   foreach t in array tbls loop
@@ -229,6 +253,7 @@ do $$ begin alter publication supabase_realtime add table team_messages; excepti
 do $$ begin alter publication supabase_realtime add table access_profiles; exception when duplicate_object then null; end $$;
 do $$ begin alter publication supabase_realtime add table system_users; exception when duplicate_object then null; end $$;
 do $$ begin alter publication supabase_realtime add table psychologists; exception when duplicate_object then null; end $$;
+do $$ begin alter publication supabase_realtime add table session_recordings; exception when duplicate_object then null; end $$;
 
 -- ════════════════════════════════════════════════════════════════════════
 -- PRONTO! Recarregue a aplicação. Os perfis padrão serão criados
