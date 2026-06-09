@@ -32,10 +32,14 @@ create table if not exists psychologists (
   phone text,
   specialties text[] not null default '{}',
   avatar_url text,
+  color text,
   status professional_status not null default 'ativo',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Garante a coluna de cor mesmo em bancos já existentes
+alter table psychologists add column if not exists color text;
 
 create table if not exists patients (
   id uuid primary key default gen_random_uuid(),

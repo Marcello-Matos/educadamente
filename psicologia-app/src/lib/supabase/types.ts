@@ -14,6 +14,7 @@ export interface Psychologist {
   phone: string | null;
   specialties: string[];
   avatar_url: string | null;
+  color: string | null;
   status: ProfessionalStatus;
   created_at: string;
   updated_at: string;

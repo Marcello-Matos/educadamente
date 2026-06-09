@@ -107,11 +107,15 @@ export default function AgendaPage() {
     setPsyColors(next);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setColorModal(null);
+    // Persiste no banco para refletir em qualquer dispositivo e no cadastro
+    supabase.from("psychologists").update({ color: colorId }).eq("id", psyId).then(() => {});
   }, [psyColors]);
 
   const getColor = (psyId: string | null | undefined) => {
     if (!psyId) return PALETTE[0];
-    const cid = psyColors[psyId] || PALETTE[psychologists.findIndex(p => p.id === psyId) % PALETTE.length]?.id || "indigo";
+    // Prioridade: cor escolhida localmente > cor salva no banco > fallback por índice
+    const dbColor = psychologists.find(p => p.id === psyId)?.color || undefined;
+    const cid = psyColors[psyId] || dbColor || PALETTE[psychologists.findIndex(p => p.id === psyId) % PALETTE.length]?.id || "indigo";
     return PALETTE.find(c => c.id === cid) || PALETTE[0];
   };
 

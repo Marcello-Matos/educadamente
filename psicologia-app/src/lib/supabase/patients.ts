@@ -22,6 +22,7 @@ export async function upsertPsychologistByEmail(input: {
   email: string;
   phone?: string | null;
   specialties?: string[];
+  color?: string | null;
 }) {
   const { data: existing } = await supabase
     .from("psychologists")
@@ -30,9 +31,13 @@ export async function upsertPsychologistByEmail(input: {
     .maybeSingle();
 
   if (existing) {
+    const patch: Record<string, unknown> = {
+      name: input.name, crp: input.crp, phone: input.phone ?? null, specialties: input.specialties ?? [],
+    };
+    if (input.color !== undefined) patch.color = input.color;
     const { data, error } = await supabase
       .from("psychologists")
-      .update({ name: input.name, crp: input.crp, phone: input.phone ?? null, specialties: input.specialties ?? [] })
+      .update(patch)
       .eq("id", existing.id)
       .select("*")
       .single();
@@ -42,7 +47,7 @@ export async function upsertPsychologistByEmail(input: {
 
   const { data, error } = await supabase
     .from("psychologists")
-    .insert({ name: input.name, crp: input.crp, email: input.email, phone: input.phone ?? null, specialties: input.specialties ?? [] })
+    .insert({ name: input.name, crp: input.crp, email: input.email, phone: input.phone ?? null, specialties: input.specialties ?? [], color: input.color ?? null })
     .select("*")
     .single();
   if (error) throw error;

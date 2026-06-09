@@ -35,6 +35,7 @@ import {
   Copy,
   AlertTriangle,
   Award,
+  Palette,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -213,6 +214,23 @@ const allPermissionGroups: PermissionGroup[] = [
 
 const allPermissionIds = allPermissionGroups.flatMap((g) => g.permissions.map((p) => p.id));
 
+// ─── PALETA DE CORES DO PROFISSIONAL (estilo TimeTree) ───
+// Mantém os mesmos ids/cores usados na Agenda para refletir igual.
+const PRO_PALETTE: { id: string; hex: string }[] = [
+  { id: "indigo",  hex: "#6366f1" },
+  { id: "violet",  hex: "#8b5cf6" },
+  { id: "sky",     hex: "#0ea5e9" },
+  { id: "emerald", hex: "#10b981" },
+  { id: "teal",    hex: "#14b8a6" },
+  { id: "amber",   hex: "#f59e0b" },
+  { id: "orange",  hex: "#f97316" },
+  { id: "rose",    hex: "#f43f5e" },
+  { id: "pink",    hex: "#ec4899" },
+  { id: "fuchsia", hex: "#d946ef" },
+  { id: "lime",    hex: "#84cc16" },
+  { id: "cyan",    hex: "#06b6d4" },
+];
+
 // ─── INITIAL DATA ───
 const initialProfiles: Profile[] = [
   {
@@ -328,6 +346,7 @@ export default function UsuariosPage() {
   const [formProfileId, setFormProfileId] = useState("");
   const [formStatus, setFormStatus] = useState<"ativo" | "inativo">("ativo");
   const [formCrp, setFormCrp] = useState("");
+  const [formColor, setFormColor] = useState(PRO_PALETTE[0].id);
   const [isProfessional, setIsProfessional] = useState(true);
   const [formPassword, setFormPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -401,7 +420,7 @@ export default function UsuariosPage() {
   const resetUserForm = () => {
     setFormName(""); setFormEmail(""); setFormPhone("");
     setFormRole(""); setFormProfileId(""); setFormStatus("ativo");
-    setFormCrp(""); setIsProfessional(true);
+    setFormCrp(""); setIsProfessional(true); setFormColor(PRO_PALETTE[0].id);
     setFormPassword(""); setShowPassword(false);
     setFormUserPerms([]); setUserExpandedGroups([]); setShowUserPerms(false);
   };
@@ -428,9 +447,9 @@ export default function UsuariosPage() {
     setFormUserPerms(prof ? [...prof.permissions] : []);
     setUserExpandedGroups([]); setShowUserPerms(false);
     // buscar profissional existente pelo e-mail
-    const { data: psy } = await supabase.from("psychologists").select("crp").eq("email", u.email).maybeSingle();
-    if (psy?.crp) { setFormCrp(psy.crp); setIsProfessional(true); }
-    else { setFormCrp(""); setIsProfessional(false); }
+    const { data: psy } = await supabase.from("psychologists").select("crp, color").eq("email", u.email).maybeSingle();
+    if (psy?.crp) { setFormCrp(psy.crp); setIsProfessional(true); setFormColor(psy.color || PRO_PALETTE[0].id); }
+    else { setFormCrp(""); setIsProfessional(false); setFormColor(PRO_PALETTE[0].id); }
     setModal("edit-user");
   };
 
@@ -453,7 +472,7 @@ export default function UsuariosPage() {
       // sincronizar profissional
       if (isProfessional && formCrp.trim()) {
         try {
-          await upsertPsychologistByEmail({ name: formName, crp: formCrp.trim(), email: formEmail, phone: formPhone });
+          await upsertPsychologistByEmail({ name: formName, crp: formCrp.trim(), email: formEmail, phone: formPhone, color: formColor });
         } catch (err) {
           const code = (err as { code?: string })?.code;
           if (code === "23505") toast.warning("CRP duplicado", "Este CRP já existe em outro profissional.");
@@ -688,6 +707,33 @@ export default function UsuariosPage() {
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">Necessário para aparecer na agenda e chat.</p>
+                </div>
+              )}
+
+              {isProfessional && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <Palette className="w-4 h-4 text-gray-400" />
+                    Cor na agenda
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {PRO_PALETTE.map((c) => {
+                      const isSelected = formColor === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setFormColor(c.id)}
+                          title={c.id}
+                          className={`w-9 h-9 rounded-full transition-all flex items-center justify-center hover:scale-110 ${isSelected ? "ring-2 ring-offset-2 ring-gray-800" : ""}`}
+                          style={{ background: c.hex }}
+                        >
+                          {isSelected && <Check className="w-4 h-4 text-white" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Identifica este profissional nos eventos da agenda.</p>
                 </div>
               )}
 
