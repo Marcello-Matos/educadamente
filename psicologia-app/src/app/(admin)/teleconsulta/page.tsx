@@ -516,20 +516,46 @@ export default function TeleconsultaPage() {
 
 
 
-  // ─── GRAVAÇÃO DE TELA ───
+  // ─── GRAVAÇÃO DE TELA / WEBCAM ───
   const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: "monitor" } as any,
-        audio: true,
-      });
-      streamRef.current = stream;
+    let stream: MediaStream | null = null;
+    let source = "tela";
+    const fileName = `recording-${Date.now()}.webm`;
 
-      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-        ? "video/webm;codecs=vp9"
-        : MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
-          ? "video/webm;codecs=vp8"
-          : "video/webm";
+    const getBestMimeType = () => {
+      if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) return "video/webm;codecs=vp9";
+      if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) return "video/webm;codecs=vp8";
+      return "video/webm";
+    };
+    const mimeType = getBestMimeType();
+
+    try {
+      // 1) Tenta gravar a tela (ideal: mostra a interface da teleconsulta)
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { displaySurface: "monitor" } as any,
+          audio: true,
+        });
+        source = "tela";
+        console.log("[recording] getDisplayMedia OK");
+      } catch (screenErr: any) {
+        console.warn("[recording] getDisplayMedia falhou:", screenErr?.name, screenErr?.message);
+        // 2) Fallback: grava a webcam local
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          source = "webcam";
+          console.log("[recording] getUserMedia OK (fallback webcam)");
+        } catch (camErr: any) {
+          console.error("[recording] getUserMedia falhou:", camErr?.name, camErr?.message);
+          throw camErr; // propaga para o catch externo
+        }
+      }
+
+      if (!stream) {
+        throw new Error("Nenhum stream de mídia obtido.");
+      }
+
+      streamRef.current = stream;
 
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
@@ -540,8 +566,6 @@ export default function TeleconsultaPage() {
           recordedChunksRef.current.push(event.data);
         }
       };
-
-      const fileName = `recording-${Date.now()}.webm`;
 
       mediaRecorder.onstop = async () => {
         const blob = new Blob(recordedChunksRef.current, { type: mimeType });
@@ -567,33 +591,40 @@ export default function TeleconsultaPage() {
           toast.error("Erro ao salvar gravação", "Não foi possível fazer upload do vídeo.");
         }
 
-        // Limpa stream
-        stream.getTracks().forEach((track) => track.stop());
+        stream?.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
         mediaRecorderRef.current = null;
       };
 
-      mediaRecorder.start(1000); // coleta a cada 1s
+      mediaRecorder.start(1000);
       recordingStartRef.current = Date.now();
       setIsRecording(true);
       setRecordingTime(0);
 
-      // Timer de exibição
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
 
-      // Cria registro no banco
       const rec = await createRecording({
         storage_path: fileName,
         status: "gravando",
         started_at: new Date().toISOString(),
       });
       setRecordingId(rec.id);
-      toast.success("Gravação iniciada", "A sessão está sendo gravada.");
-    } catch (err) {
+      toast.success("Gravação iniciada", source === "tela" ? "Compartilhamento de tela sendo gravado." : "Webcam sendo gravada (fallback).");
+    } catch (err: any) {
       console.error("[recording] start error:", err);
-      toast.error("Erro ao iniciar gravação", "Permissão de compartilhamento de tela negada ou não suportada.");
+      const name = err?.name || "";
+      const msg = err?.message || "";
+      if (name === "NotAllowedError" || msg.includes("denied") || msg.includes("negada")) {
+        toast.error("Permissão negada", "Você precisa permitir acesso à câmera/tela para gravar.");
+      } else if (name === "NotFoundError" || msg.includes("found")) {
+        toast.error("Dispositivo não encontrado", "Nenhuma câmera ou microfone detectado.");
+      } else if (name === "NotSupportedError" || msg.includes("HTTPS")) {
+        toast.error("HTTPS necessário", "A gravação só funciona em conexões seguras (HTTPS).");
+      } else {
+        toast.error("Erro ao iniciar gravação", msg || "Tente novamente ou use outro navegador.");
+      }
     }
   };
 
