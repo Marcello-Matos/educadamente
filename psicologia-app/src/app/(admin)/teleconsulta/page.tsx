@@ -2,7 +2,7 @@
 
 
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 import {
   Video,
@@ -374,6 +374,11 @@ export default function TeleconsultaPage() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingStartRef = useRef<number>(0);
 
+  // ─── PREVIEW DA WEBCAM (estilo Zoom) ───
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const camStreamRef = useRef<MediaStream | null>(null);
+  const [camError, setCamError] = useState<string | null>(null);
+
 
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
@@ -383,6 +388,66 @@ export default function TeleconsultaPage() {
   const scheduledRooms = rooms.filter((r) => r.status === "agendada");
 
   const allRoles = [...new Set(rooms.map((r) => r.professionalRole))];
+
+  // Liga a webcam ao entrar numa sala; desliga ao sair
+  useEffect(() => {
+    if (!activeRoomId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        camStreamRef.current = stream;
+        setCamError(null);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.play().catch(() => {});
+        }
+      } catch (err: any) {
+        console.error("[webcam] erro:", err?.name, err?.message);
+        setCamError(
+          err?.name === "NotAllowedError"
+            ? "Permissão de câmera negada"
+            : err?.name === "NotFoundError"
+              ? "Nenhuma câmera encontrada"
+              : "Não foi possível acessar a câmera"
+        );
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (camStreamRef.current) {
+        camStreamRef.current.getTracks().forEach((t) => t.stop());
+        camStreamRef.current = null;
+      }
+    };
+  }, [activeRoomId]);
+
+  // Garante que o elemento <video> receba o stream quando montar
+  useEffect(() => {
+    if (localVideoRef.current && camStreamRef.current) {
+      localVideoRef.current.srcObject = camStreamRef.current;
+      localVideoRef.current.play().catch(() => {});
+    }
+  }, [activeRoomId, videoOn, chatOpen]);
+
+  // Liga/desliga as tracks conforme botões de vídeo/microfone
+  useEffect(() => {
+    if (camStreamRef.current) {
+      camStreamRef.current.getVideoTracks().forEach((t) => (t.enabled = videoOn));
+    }
+  }, [videoOn]);
+
+  useEffect(() => {
+    if (camStreamRef.current) {
+      camStreamRef.current.getAudioTracks().forEach((t) => (t.enabled = micOn));
+    }
+  }, [micOn]);
 
 
 
@@ -530,24 +595,20 @@ export default function TeleconsultaPage() {
     const mimeType = getBestMimeType();
 
     try {
-      // 1) Tenta gravar a tela (ideal: mostra a interface da teleconsulta)
-      try {
-        stream = await navigator.mediaDevices.getDisplayMedia({
-          video: { displaySurface: "monitor" } as any,
-          audio: true,
-        });
-        source = "tela";
-        console.log("[recording] getDisplayMedia OK");
-      } catch (screenErr: any) {
-        console.warn("[recording] getDisplayMedia falhou:", screenErr?.name, screenErr?.message);
-        // 2) Fallback: grava a webcam local
+      // 1) Usa a webcam que já está ligada na sala (sem novos diálogos)
+      if (camStreamRef.current && camStreamRef.current.getVideoTracks().length > 0) {
+        stream = camStreamRef.current;
+        source = "webcam";
+        console.log("[recording] usando webcam já ativa");
+      } else {
+        // 2) Fallback: pede a webcam
         try {
           stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
           source = "webcam";
-          console.log("[recording] getUserMedia OK (fallback webcam)");
+          console.log("[recording] getUserMedia OK");
         } catch (camErr: any) {
           console.error("[recording] getUserMedia falhou:", camErr?.name, camErr?.message);
-          throw camErr; // propaga para o catch externo
+          throw camErr;
         }
       }
 
@@ -591,7 +652,10 @@ export default function TeleconsultaPage() {
           toast.error("Erro ao salvar gravação", "Não foi possível fazer upload do vídeo.");
         }
 
-        stream?.getTracks().forEach((track) => track.stop());
+        // Só para as tracks se NÃO for o stream da câmera ao vivo
+        if (stream && stream !== camStreamRef.current) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
         streamRef.current = null;
         mediaRecorderRef.current = null;
       };
@@ -703,60 +767,60 @@ export default function TeleconsultaPage() {
 
                 <div className="relative bg-gray-900 aspect-video flex items-center justify-center">
 
-                  <div className="text-center">
+                  {/* Self-view: sua webcam ao vivo (estilo Zoom) */}
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className={`absolute inset-0 w-full h-full object-cover -scale-x-100 ${videoOn && !camError ? "block" : "hidden"}`}
+                  />
 
-                    <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-
-                      <User className="w-12 h-12 text-gray-400" />
-
+                  {/* Placeholder quando câmera desligada ou com erro */}
+                  {(!videoOn || camError) && (
+                    <div className="text-center z-10">
+                      <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                        {camError ? <VideoOff className="w-12 h-12 text-red-400" /> : <User className="w-12 h-12 text-gray-400" />}
+                      </div>
+                      <p className="text-white text-lg">{activeRoom.patientName}</p>
+                      <p className="text-gray-400 text-sm">
+                        Profissional: {activeRoom.professionalName} ({activeRoom.professionalRole})
+                      </p>
+                      <p className={`text-xs mt-1 ${camError ? "text-red-400" : "text-gray-500"}`}>
+                        {camError ? camError : !videoOn ? "Câmera desligada" : "Conectando..."}
+                      </p>
                     </div>
+                  )}
 
-                    <p className="text-white text-lg">{activeRoom.patientName}</p>
-
-                    <p className="text-gray-400 text-sm">
-
-                      Profissional: {activeRoom.professionalName} ({activeRoom.professionalRole})
-
-                    </p>
-
-                    <p className="text-gray-500 text-xs mt-1">
-
-                      {activeRoom.status === "em_andamento" ? "Conectado" : "Aguardando"} • Sala {activeRoom.id.replace("room-", "#")}
-
-                    </p>
-
-                  </div>
-
-
-
-                  <div className="absolute bottom-4 right-4 w-24 h-20 sm:w-48 sm:h-36 bg-gray-800 rounded-lg border-2 border-gray-600 flex items-center justify-center">
-
-                    <div className="text-center">
-
-                      {videoOn ? (
-
-                        <>
-
-                          <User className="w-8 h-8 text-gray-500 mx-auto" />
-
-                          <p className="text-gray-400 text-xs mt-1">Você</p>
-
-                        </>
-
-                      ) : (
-
-                        <>
-
-                          <VideoOff className="w-8 h-8 text-red-400 mx-auto" />
-
-                          <p className="text-red-400 text-xs mt-1">Câmera desligada</p>
-
-                        </>
-
-                      )}
-
+                  {/* Label do paciente sobreposto quando vídeo ligado */}
+                  {videoOn && !camError && (
+                    <div className="absolute bottom-4 left-4 bg-black/50 px-3 py-1.5 rounded-lg z-10">
+                      <p className="text-white text-sm font-medium">{activeRoom.professionalName}</p>
+                      <p className="text-gray-300 text-xs">{activeRoom.professionalRole} • Você</p>
                     </div>
+                  )}
 
+                  {/* Miniatura "Você" no canto */}
+                  <div className="absolute bottom-4 right-4 w-24 h-20 sm:w-48 sm:h-36 bg-gray-800 rounded-lg border-2 border-gray-600 overflow-hidden flex items-center justify-center z-10">
+                    {videoOn && !camError ? (
+                      <>
+                        <video
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover -scale-x-100"
+                          ref={(el) => {
+                            if (el && camStreamRef.current) el.srcObject = camStreamRef.current;
+                          }}
+                        />
+                        <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">Você</span>
+                      </>
+                    ) : (
+                      <div className="text-center">
+                        <VideoOff className="w-8 h-8 text-red-400 mx-auto" />
+                        <p className="text-red-400 text-xs mt-1">Câmera desligada</p>
+                      </div>
+                    )}
                   </div>
 
 
