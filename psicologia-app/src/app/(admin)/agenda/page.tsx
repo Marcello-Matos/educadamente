@@ -12,6 +12,8 @@ import { supabase } from "@/lib/supabase/client";
 import { getPatients, getPsychologists } from "@/lib/supabase/patients";
 import { getSessions, createSession, deleteSession, updateSession } from "@/lib/supabase/sessions";
 import { createReminder, updateSessionReminders } from "@/lib/supabase/reminders";
+import { sendSessionNotification } from "@/lib/notifications";
+import { toast } from "@/hooks/use-toast";
 import { Patient, Psychologist, Session } from "@/lib/supabase/types";
 import { PRO_PALETTE as PALETTE } from "@/lib/palette";
 
@@ -219,6 +221,31 @@ export default function AgendaPage() {
             psychologist_id: fPsy,
           });
         } catch { /* lembrete é opcional, ignora se a tabela não existir */ }
+      }
+
+      // Notificação automática por e-mail e WhatsApp
+      const patient = patients.find(p => p.id === fPatient);
+      const psy = psychologists.find(p => p.id === fPsy);
+      if (patient && psy) {
+        try {
+          const result = await sendSessionNotification({
+            patientName: patient.name,
+            patientEmail: patient.email,
+            patientPhone: patient.phone,
+            psychologistName: psy.name,
+            sessionDate: fDate,
+            sessionTime: fTime,
+            sessionType: fType,
+            duration: Number(fDur),
+          });
+          if (result.email === true && result.whatsapp === true) {
+            toast.success("Notificação enviada", "E-mail e WhatsApp enviados ao paciente.");
+          } else if (result.email === true) {
+            toast.success("E-mail enviado", "O paciente foi notificado por e-mail.");
+          } else if (result.whatsapp === true) {
+            toast.success("WhatsApp enviado", "O paciente foi notificado por WhatsApp.");
+          }
+        } catch { /* notificação é complementar, não bloqueia o fluxo */ }
       }
 
       setShowModal(false);

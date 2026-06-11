@@ -10,10 +10,12 @@ export async function getPsychologists() {
   const { data, error } = await supabase
     .from("psychologists")
     .select("*")
-    .eq("status", "ativo")
     .order("name", { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    console.error("[getPsychologists] erro:", error.message);
+    throw error;
+  }
   return (data ?? []) as Psychologist[];
 }
 

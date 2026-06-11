@@ -153,7 +153,8 @@ export default function PacientesPage() {
       ]);
       setPatients(patientsData);
       setPsychologists(psychologistsData);
-    } catch (err) {
+    } catch (err: any) {
+      console.error("[Pacientes] Erro ao carregar:", err);
       setError(err instanceof Error ? err.message : "Erro ao carregar pacientes");
     } finally {
       setLoading(false);
