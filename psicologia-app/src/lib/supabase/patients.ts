@@ -10,6 +10,7 @@ export async function getPsychologists() {
   const { data, error } = await supabase
     .from("psychologists")
     .select("*")
+    .eq("status", "ativo")
     .order("name", { ascending: true });
 
   if (error) throw error;
@@ -56,7 +57,11 @@ export async function upsertPsychologistByEmail(input: {
 
 export async function deletePsychologistByEmail(email: string) {
   if (!email) return;
-  await supabase.from("psychologists").delete().eq("email", email);
+  const { error } = await supabase.from("psychologists").delete().ilike("email", email);
+  if (error) {
+    console.error("[deletePsychologistByEmail] erro:", error.message);
+    throw error;
+  }
 }
 
 export async function createPsychologist(input: {

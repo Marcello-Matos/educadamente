@@ -13,7 +13,7 @@ export interface Psychologist {
   email: string | null;
   phone: string | null;
   specialties: string[];
-  avatar_url: string | null;
+  photo_url: string | null;
   color: string | null;
   status: ProfessionalStatus;
   created_at: string;
@@ -38,6 +38,7 @@ export interface Patient {
   notes: string | null;
   diagnosis: string | null;
   cid: string | null;
+  photo_url: string | null;
   created_at: string;
   updated_at: string;
   psychologists?: Pick<Psychologist, "id" | "name" | "crp"> | null;

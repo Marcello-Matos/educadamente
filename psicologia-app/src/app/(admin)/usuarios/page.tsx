@@ -38,7 +38,9 @@ import {
   AlertTriangle,
   Award,
   Palette,
+  Camera,
 } from "lucide-react";
+import { uploadProfilePhoto, updatePsychologistPhoto, updateSystemUserPhoto } from "@/lib/supabase/photos";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -318,6 +320,7 @@ export default function UsuariosPage() {
   const [modal, setModal] = useState<ModalType>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [users, setUsers] = useState<SystemUser[]>([]);
+  const [userPhotos, setUserPhotos] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -339,6 +342,9 @@ export default function UsuariosPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [formUserPerms, setFormUserPerms] = useState<string[]>([]);
   const [userExpandedGroups, setUserExpandedGroups] = useState<string[]>([]);
+  const [formPhotoFile, setFormPhotoFile] = useState<File | null>(null);
+  const [formPhotoPreview, setFormPhotoPreview] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showUserPerms, setShowUserPerms] = useState(false);
 
   // ─── Profile form states ───
@@ -355,6 +361,21 @@ export default function UsuariosPage() {
         setProfiles(seeded);
         const us = await getSystemUsers();
         setUsers(us);
+        // Buscar fotos de perfil dos usuários
+        try {
+          const emails = us.map((u) => u.email).filter(Boolean);
+          if (emails.length > 0) {
+            const { data: psychs } = await supabase
+              .from("psychologists")
+              .select("email, photo_url")
+              .in("email", emails);
+            const photoMap: Record<string, string> = {};
+            psychs?.forEach((p: { email: string; photo_url: string | null }) => {
+              if (p.photo_url) photoMap[p.email] = p.photo_url;
+            });
+            setUserPhotos(photoMap);
+          }
+        } catch (e) { /* ignore */ }
         setDbError(null);
       } catch (err) {
         const msg = (err as { message?: string })?.message || "";
@@ -373,7 +394,24 @@ export default function UsuariosPage() {
 
     const channel = supabase
       .channel("users-page-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "system_users" }, () => getSystemUsers().then(setUsers).catch(() => {}))
+      .on("postgres_changes", { event: "*", schema: "public", table: "system_users" }, async () => {
+        try {
+          const us = await getSystemUsers();
+          setUsers(us);
+          const emails = us.map((u) => u.email).filter(Boolean);
+          if (emails.length > 0) {
+            const { data: psychs } = await supabase
+              .from("psychologists")
+              .select("email, photo_url")
+              .in("email", emails);
+            const photoMap: Record<string, string> = {};
+            psychs?.forEach((p: { email: string; photo_url: string | null }) => {
+              if (p.photo_url) photoMap[p.email] = p.photo_url;
+            });
+            setUserPhotos(photoMap);
+          }
+        } catch { /* ignore */ }
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "access_profiles" }, () => getProfiles().then(setProfiles).catch(() => {}))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -410,6 +448,22 @@ export default function UsuariosPage() {
     setFormCrp(""); setIsProfessional(true); setFormColor(PRO_PALETTE[0].id);
     setFormPassword(""); setShowPassword(false);
     setFormUserPerms([]); setUserExpandedGroups([]); setShowUserPerms(false);
+    setFormPhotoFile(null); setFormPhotoPreview(null);
+  };
+
+  const handleUserPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("A foto deve ter no máximo 5MB");
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Formato não suportado. Use JPEG, PNG, WebP ou GIF");
+      return;
+    }
+    setFormPhotoFile(file);
+    setFormPhotoPreview(URL.createObjectURL(file));
   };
 
   const resetProfileForm = () => {
@@ -494,6 +548,28 @@ export default function UsuariosPage() {
         setUsers((prev) => prev.map((u) => (u.id === selectedUserId ? savedUser : u)));
         toast.success("Usuário atualizado");
       } else { return; }
+
+      // Upload da foto de perfil se foi selecionada
+      if (formPhotoFile) {
+        try {
+          setUploadingPhoto(true);
+          const { data: psychData } = await supabase
+            .from("psychologists")
+            .select("id")
+            .ilike("email", formEmail)
+            .limit(1)
+            .single();
+          if (psychData?.id) {
+            const { url } = await uploadProfilePhoto(formPhotoFile, psychData.id);
+            await updatePsychologistPhoto(psychData.id, url);
+            setUserPhotos((prev) => ({ ...prev, [formEmail]: url }));
+          }
+        } catch (photoErr) {
+          console.error("Erro ao fazer upload da foto:", photoErr);
+        } finally {
+          setUploadingPhoto(false);
+        }
+      }
 
       // sincronizar profissional
       if (isProfessional && formCrp.trim()) {
@@ -676,6 +752,29 @@ export default function UsuariosPage() {
               </button>
             </div>
             <div className="p-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center cursor-pointer hover:border-indigo-400 transition-colors">
+                  {formPhotoPreview || (modal === "edit-user" && selectedUserId && userPhotos[users.find(u => u.id === selectedUserId)?.email || ""]) ? (
+                    <img src={formPhotoPreview || userPhotos[users.find(u => u.id === selectedUserId)?.email || ""]} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-8 h-8 text-gray-400" />
+                  )}
+                  <input
+                    type="file"
+                    id="user-photo-upload"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleUserPhotoChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label htmlFor="user-photo-upload" className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <Camera className="w-4 h-4" />
+                    {formPhotoFile ? "Trocar foto" : "Adicionar foto"}
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">JPEG, PNG, WebP ou GIF (máx. 5MB)</p>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nome Completo *</label>
                 <div className="relative">
@@ -1090,8 +1189,12 @@ export default function UsuariosPage() {
             </div>
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center">
-                  <User className="w-8 h-8 text-indigo-600" />
+                <div className="w-16 h-16 bg-indigo-100 rounded-full overflow-hidden flex items-center justify-center border-2 border-gray-200">
+                  {userPhotos[user.email] ? (
+                    <img src={userPhotos[user.email]} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-8 h-8 text-indigo-600" />
+                  )}
                 </div>
                 <div>
                   <h4 className="text-lg font-bold text-gray-900">{user.name}</h4>
@@ -1266,8 +1369,10 @@ export default function UsuariosPage() {
                         <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                                {profile?.id === "profile-master" ? (
+                              <div className="w-10 h-10 bg-indigo-100 rounded-full overflow-hidden flex items-center justify-center border-2 border-gray-200 cursor-pointer hover:border-indigo-400 transition-colors" onClick={() => openEditUser(user)} title="Clique para editar">
+                                {userPhotos[user.email] ? (
+                                  <img src={userPhotos[user.email]} alt={user.name} className="w-full h-full object-cover" />
+                                ) : profile?.id === "profile-master" ? (
                                   <Crown className="w-5 h-5 text-red-500" />
                                 ) : (
                                   <User className="w-5 h-5 text-indigo-600" />

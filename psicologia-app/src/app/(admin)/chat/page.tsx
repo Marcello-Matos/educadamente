@@ -32,6 +32,7 @@ export default function ChatPage() {
   const { user } = useAuth();
   const [messages, setMessages] = useState<TeamMessage[]>([]);
   const [psychologists, setPsych] = useState<Psychologist[]>([]);
+  const [psychPhotos, setPsychPhotos] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [identity, setIdentity] = useState<{ id: string | null; name: string } | null>(null);
   const [draft, setDraft] = useState("");
@@ -44,14 +45,37 @@ export default function ChatPage() {
   const [regCrp, setRegCrp] = useState("");
   const [regSaving, setRegSaving] = useState(false);
 
-  useEffect(() => {
-    const stored = localStorage.getItem(IDENTITY_KEY);
-    if (stored) setIdentity(JSON.parse(stored));
+  // Função para carregar profissionais e validar identidade
+  const loadPsychologists = async () => {
+    try {
+      const ps = await getPsychologists();
+      setPsych(ps);
+      const photoMap: Record<string, string> = {};
+      ps.forEach((p) => { if (p.photo_url) photoMap[p.name] = p.photo_url; });
+      setPsychPhotos(photoMap);
 
-    Promise.all([getTeamMessages(), getPsychologists()])
+      // Validar se a identidade armazenada ainda existe
+      const stored = localStorage.getItem(IDENTITY_KEY);
+      if (stored) {
+        const storedId = JSON.parse(stored) as { id: string; name: string };
+        const stillExists = ps.some(p => p.id === storedId.id && p.name === storedId.name);
+        if (!stillExists) {
+          setIdentity(null);
+          localStorage.removeItem(IDENTITY_KEY);
+        } else {
+          setIdentity(storedId);
+        }
+      }
+      return ps;
+    } catch {
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    Promise.all([getTeamMessages(), loadPsychologists()])
       .then(([m, ps]) => {
         setMessages(m);
-        setPsych(ps);
         // Se usuario logado tem dados de profissional e nao ha profissionais, criar automaticamente
         if (ps.length === 0 && user) {
           const meta = user.user_metadata;
@@ -84,7 +108,27 @@ export default function ChatPage() {
         });
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    const psychChannel = supabase
+      .channel("psychologists-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "psychologists" }, () => {
+        loadPsychologists().catch(() => {});
+      })
+      .subscribe();
+
+    // Atualizar quando a aba ganhar foco
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        loadPsychologists().catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(psychChannel);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -163,8 +207,12 @@ export default function ChatPage() {
             )}
             {psychologists.map(p => (
               <button key={p.id} onClick={() => pickIdentity(p)} className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors text-left">
-                <span className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ background: colorFor(p.name) }}>
-                  {initials(p.name)}
+                <span className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ background: psychPhotos[p.name] ? undefined : colorFor(p.name) }}>
+                  {psychPhotos[p.name] ? (
+                    <img src={psychPhotos[p.name]} alt={p.name} className="w-full h-full object-cover" />
+                  ) : (
+                    initials(p.name)
+                  )}
                 </span>
                 <span className="text-sm font-medium text-gray-800">{p.name}</span>
               </button>
@@ -217,8 +265,12 @@ export default function ChatPage() {
             className="flex items-center gap-2 rounded-full hover:bg-white/15 px-2 py-1 transition-colors"
           >
             <span className="text-xs text-white/80 hidden sm:inline">Trocar</span>
-            <span className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white/40" style={{ background: colorFor(identity.name) }}>
-              {initials(identity.name)}
+            <span className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white/40" style={{ background: psychPhotos[identity.name] ? undefined : colorFor(identity.name) }}>
+              {psychPhotos[identity.name] ? (
+                <img src={psychPhotos[identity.name]} alt={identity.name} className="w-full h-full object-cover" />
+              ) : (
+                initials(identity.name)
+              )}
             </span>
           </button>
         )}
@@ -238,8 +290,12 @@ export default function ChatPage() {
             const mine = identity && m.author_name === identity.name;
             return (
               <div key={m.id} className={`flex items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}>
-                <span className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0" style={{ background: colorFor(m.author_name) }}>
-                  {initials(m.author_name)}
+                <span className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white text-[10px] font-bold shrink-0" style={{ background: psychPhotos[m.author_name] ? undefined : colorFor(m.author_name) }}>
+                  {psychPhotos[m.author_name] ? (
+                    <img src={psychPhotos[m.author_name]} alt={m.author_name} className="w-full h-full object-cover" />
+                  ) : (
+                    initials(m.author_name)
+                  )}
                 </span>
                 <div className={`max-w-[75%] ${mine ? "items-end" : "items-start"} flex flex-col`}>
                   {!mine && <span className="text-[11px] font-semibold text-gray-500 mb-0.5 px-1">{m.author_name}</span>}

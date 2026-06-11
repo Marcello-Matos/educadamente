@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Eye, EyeOff, Shield, User, Phone, ArrowLeft, AlertCircle } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, Shield, User, Phone, ArrowLeft, AlertCircle, Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { signUp } from "@/lib/supabase/auth";
 import { createPsychologist, checkCrpExists } from "@/lib/supabase/patients";
 import { createSystemUser } from "@/lib/supabase/users";
+import { uploadProfilePhoto, updatePsychologistPhoto } from "@/lib/supabase/photos";
 import { toast } from "@/hooks/use-toast";
 
 export default function RegistroPage() {
@@ -27,6 +28,35 @@ export default function RegistroPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validações
+    if (file.size > 5 * 1024 * 1024) {
+      setError("A foto deve ter no máximo 5MB");
+      return;
+    }
+
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      setError("Formato não suportado. Use JPEG, PNG, WebP ou GIF");
+      return;
+    }
+
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    setError("");
+  };
+
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +84,20 @@ export default function RegistroPage() {
 
       const result = await signUp(email, password, { name, crp, phone, specialty });
       // Cria o registro do profissional (aparece na agenda, chat, etc.)
-      await createPsychologist({ name, crp, email, phone, specialties: specialty ? [specialty] : [] });
+      const psych = await createPsychologist({ name, crp, email, phone, specialties: specialty ? [specialty] : [] });
+      // Upload da foto de perfil se foi selecionada
+      if (photoFile && psych.id) {
+        try {
+          setUploadingPhoto(true);
+          const { url } = await uploadProfilePhoto(photoFile, psych.id);
+          await updatePsychologistPhoto(psych.id, url);
+        } catch (photoErr) {
+          console.error("Erro ao fazer upload da foto:", photoErr);
+          // Não impede o registro se a foto falhar
+        } finally {
+          setUploadingPhoto(false);
+        }
+      }
       // Cria o usuário do sistema (aparece na página Usuários)
       try { await createSystemUser({ name, email, phone, role: crp ? `Psicólogo - ${crp}` : "Psicólogo", profileId: "", status: "ativo" }); } catch { /* ignora se já existe */ }
 
@@ -124,6 +167,47 @@ export default function RegistroPage() {
               )}
               {step === 1 ? (
                 <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Foto de Perfil
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+                        {photoPreview ? (
+                          <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-10 h-10 text-gray-400" />
+                        )}
+                        {photoPreview && (
+                          <button
+                            type="button"
+                            onClick={removePhoto}
+                            className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          id="photo-upload"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          onChange={handlePhotoChange}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="photo-upload"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
+                        >
+                          <Camera className="w-4 h-4" />
+                          {photoFile ? "Trocar foto" : "Adicionar foto"}
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">JPEG, PNG, WebP ou GIF (máx. 5MB)</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       Nome Completo *

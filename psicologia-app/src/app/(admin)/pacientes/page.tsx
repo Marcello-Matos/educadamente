@@ -10,6 +10,9 @@ import {
   Phone,
   Mail,
   Trash2,
+  Camera,
+  X,
+  User,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +33,7 @@ import {
   getPsychologists,
   updatePatient,
 } from "@/lib/supabase/patients";
+import { uploadProfilePhoto, updatePatientPhoto } from "@/lib/supabase/photos";
 import { CreatePatientInput, Patient, Psychologist } from "@/lib/supabase/types";
 
 const statusConfig = {
@@ -110,6 +114,34 @@ export default function PacientesPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("A foto deve ter no máximo 5MB");
+      return;
+    }
+
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      setError("Formato não suportado. Use JPEG, PNG, WebP ou GIF");
+      return;
+    }
+
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    setError("");
+  };
+
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+  };
 
   const loadData = async () => {
     try {
@@ -169,6 +201,7 @@ export default function PacientesPage() {
     setEditingPatient(null);
     setShowForm(false);
     setError(null);
+    removePhoto();
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -187,15 +220,42 @@ export default function PacientesPage() {
 
       if (editingPatient) {
         const updated = await updatePatient(editingPatient.id, payload);
+        // Upload da foto se foi alterada
+        if (photoFile) {
+          try {
+            setUploadingPhoto(true);
+            const { url } = await uploadProfilePhoto(photoFile, updated.id);
+            await updatePatientPhoto(updated.id, url);
+            updated.photo_url = url;
+          } catch (photoErr) {
+            console.error("Erro ao fazer upload da foto:", photoErr);
+          } finally {
+            setUploadingPhoto(false);
+          }
+        }
         setPatients((prev) => prev.map((patient) => (patient.id === updated.id ? updated : patient)));
       } else {
         const created = await createPatient(payload);
+        // Upload da foto se foi selecionada
+        if (photoFile) {
+          try {
+            setUploadingPhoto(true);
+            const { url } = await uploadProfilePhoto(photoFile, created.id);
+            await updatePatientPhoto(created.id, url);
+            created.photo_url = url;
+          } catch (photoErr) {
+            console.error("Erro ao fazer upload da foto:", photoErr);
+          } finally {
+            setUploadingPhoto(false);
+          }
+        }
         setPatients((prev) => [created, ...prev]);
       }
 
       setForm(initialForm);
       setEditingPatient(null);
       setShowForm(false);
+      removePhoto();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar paciente");
     } finally {
@@ -269,6 +329,44 @@ export default function PacientesPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="md:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Foto de Perfil</label>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-20 h-20 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+                    {photoPreview || editingPatient?.photo_url ? (
+                      <img src={photoPreview || editingPatient?.photo_url || ""} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-8 h-8 text-gray-400" />
+                    )}
+                    {(photoPreview || editingPatient?.photo_url) && (
+                      <button
+                        type="button"
+                        onClick={removePhoto}
+                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      id="patient-photo-upload"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="patient-photo-upload"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <Camera className="w-4 h-4" />
+                      {photoFile ? "Trocar foto" : "Adicionar foto"}
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">JPEG, PNG, WebP ou GIF (máx. 5MB)</p>
+                  </div>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nome Completo *</label>
                 <Input placeholder="Nome do paciente" value={form.name} onChange={(e) => handleChange("name", e.target.value)} />
@@ -369,9 +467,18 @@ export default function PacientesPage() {
                 {!loading && filteredPatients.map((patient) => (
                   <tr key={patient.id} className="hover:bg-gray-50/80 transition-colors duration-150">
                     <td className="px-4 py-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{patient.name}</p>
-                        <p className="text-xs text-gray-500">CPF: {patient.cpf || "Não informado"}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-2 border-gray-200 shrink-0">
+                          {patient.photo_url ? (
+                            <img src={patient.photo_url} alt={patient.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-5 h-5 text-gray-400" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{patient.name}</p>
+                          <p className="text-xs text-gray-500">CPF: {patient.cpf || "Não informado"}</p>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">

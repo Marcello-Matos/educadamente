@@ -31,7 +31,7 @@ create table if not exists psychologists (
   email text,
   phone text,
   specialties text[] not null default '{}',
-  avatar_url text,
+  photo_url text,
   color text,
   status professional_status not null default 'ativo',
   created_at timestamptz not null default now(),
@@ -40,6 +40,8 @@ create table if not exists psychologists (
 
 -- Garante a coluna de cor mesmo em bancos já existentes
 alter table psychologists add column if not exists color text;
+-- Migração: renomear avatar_url para photo_url se existir
+alter table psychologists rename column avatar_url to photo_url;
 
 create table if not exists patients (
   id uuid primary key default gen_random_uuid(),
@@ -59,6 +61,7 @@ create table if not exists patients (
   notes text,
   diagnosis text,
   cid text,
+  photo_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -125,11 +128,13 @@ create table if not exists system_users (
   permissions text[] not null default '{}',
   status text not null default 'ativo',
   last_access text,
+  photo_url text,
   created_at timestamptz not null default now()
 );
 
 -- Garante a coluna de permissões mesmo em bancos já existentes
 alter table system_users add column if not exists permissions text[] not null default '{}';
+alter table system_users add column if not exists photo_url text;
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- COLABORAÇÃO: TAREFAS, LEMBRETES, CHAT
@@ -223,6 +228,13 @@ on conflict (id) do update set
   public = true,
   allowed_mime_types = array['video/webm', 'video/mp4', 'video/x-matroska'];
 
+-- Bucket para fotos de perfil de usuários
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('user-photos', 'user-photos', true, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+on conflict (id) do update set
+  public = true,
+  allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
 -- Políticas de Storage para o bucket session-recordings (sem elas o upload é bloqueado pelo RLS)
 drop policy if exists "recordings read" on storage.objects;
 drop policy if exists "recordings insert" on storage.objects;
@@ -245,6 +257,29 @@ create policy "recordings update" on storage.objects
 create policy "recordings delete" on storage.objects
   for delete to authenticated, anon
   using (bucket_id = 'session-recordings');
+
+-- Políticas de Storage para o bucket user-photos
+drop policy if exists "user-photos read" on storage.objects;
+drop policy if exists "user-photos insert" on storage.objects;
+drop policy if exists "user-photos update" on storage.objects;
+drop policy if exists "user-photos delete" on storage.objects;
+
+create policy "user-photos read" on storage.objects
+  for select to authenticated, anon
+  using (bucket_id = 'user-photos');
+
+create policy "user-photos insert" on storage.objects
+  for insert to authenticated, anon
+  with check (bucket_id = 'user-photos');
+
+create policy "user-photos update" on storage.objects
+  for update to authenticated, anon
+  using (bucket_id = 'user-photos')
+  with check (bucket_id = 'user-photos');
+
+create policy "user-photos delete" on storage.objects
+  for delete to authenticated, anon
+  using (bucket_id = 'user-photos');
 
 -- Políticas (cria para authenticated e anon). Recria de forma segura.
 do $$

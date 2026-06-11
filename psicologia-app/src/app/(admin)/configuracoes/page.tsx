@@ -138,10 +138,14 @@ export default function ConfiguracoesPage() {
             {team.map((member) => (
               <div key={member.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-bold text-indigo-600">
-                      {member.name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
-                    </span>
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-indigo-100 flex items-center justify-center border-2 border-gray-200">
+                    {member.photo_url ? (
+                      <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs font-bold text-indigo-600">
+                        {member.name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm font-medium">{member.name}</p>

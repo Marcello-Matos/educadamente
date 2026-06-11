@@ -54,6 +54,7 @@ export default function AgendaPage() {
   const [sessions, setSessions]       = useState<Session[]>([]);
   const [patients, setPatients]       = useState<Patient[]>([]);
   const [psychologists, setPsych]     = useState<Psychologist[]>([]);
+  const [psychPhotos, setPsychPhotos] = useState<Record<string, string>>({});
   const [filterPsy, setFilterPsy]     = useState<string | null>(null);
   const [showModal, setShowModal]     = useState(false);
   const [colorModal, setColorModal]   = useState<string | null>(null); // psychologist id
@@ -80,7 +81,12 @@ export default function AgendaPage() {
 
   useEffect(() => {
     Promise.all([getSessions(), getPatients(), getPsychologists()])
-      .then(([s, p, ps]) => { setSessions(s); setPatients(p); setPsych(ps); })
+      .then(([s, p, ps]) => {
+        setSessions(s); setPatients(p); setPsych(ps);
+        const photoMap: Record<string, string> = {};
+        ps.forEach((psy) => { if (psy.photo_url) photoMap[psy.id] = psy.photo_url; });
+        setPsychPhotos(photoMap);
+      })
       .catch(() => {});
 
     // Colaboração em tempo real: recarrega sessões quando qualquer um altera
@@ -390,8 +396,12 @@ export default function AgendaPage() {
                     <div className="w-1 self-stretch rounded-full" style={{ background: c.hex }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate">{s.patients?.name || "Paciente"}</p>
-                      <p className="text-xs text-gray-500 truncate flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.hex }} />
+                      <p className="text-xs text-gray-500 truncate flex items-center gap-1.5">
+                        {s.psychologist_id && psychPhotos[s.psychologist_id] ? (
+                          <img src={psychPhotos[s.psychologist_id]} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.hex }} />
+                        )}
                         {s.psychologists?.name || "—"}
                       </p>
                     </div>

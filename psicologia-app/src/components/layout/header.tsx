@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bell, Search, User, LogOut, Settings, ChevronDown,
-  Sun, Moon, Keyboard, X, Calendar, CreditCard, Users, CheckCircle,
+  Sun, Moon, Keyboard, X, Calendar, CreditCard, Users, CheckCircle, Camera,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { useTheme } from "@/hooks/use-theme";
 import { ShortcutsModal } from "@/components/ui/shortcuts-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { signOut } from "@/lib/supabase/auth";
+import { supabase } from "@/lib/supabase/client";
+import { uploadProfilePhoto, updatePsychologistPhoto } from "@/lib/supabase/photos";
 
 const notifications: { id: number; icon: typeof Calendar; color: string; title: string; sub: string; time: string; read: boolean }[] = [];
 
@@ -23,6 +25,8 @@ export function Header() {
   const [showNotif,      setShowNotif]      = useState(false);
   const [showShortcuts,  setShowShortcuts]  = useState(false);
   const [notifs,         setNotifs]         = useState(notifications);
+  const [userPhotoUrl,   setUserPhotoUrl]   = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto]   = useState(false);
 
   const unread = notifs.filter((n) => !n.read).length;
 
@@ -37,6 +41,72 @@ export function Header() {
   };
 
   const markAllRead = () => setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
+
+  // Buscar foto de perfil do usuário logado
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const fetchUserPhoto = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("psychologists")
+          .select("photo_url")
+          .ilike("email", user.email || "")
+          .limit(1)
+          .single();
+
+        if (!error && data?.photo_url) {
+          setUserPhotoUrl(data.photo_url);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar foto do usuário:", err);
+      }
+    };
+
+    fetchUserPhoto();
+  }, [user?.email]);
+
+  // Upload de foto direto pelo header
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("A foto deve ter no máximo 5MB");
+      return;
+    }
+
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      alert("Formato não suportado. Use JPEG, PNG, WebP ou GIF");
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      // Buscar ID do psychologist pelo email
+      const { data: psychData, error: psychError } = await supabase
+        .from("psychologists")
+        .select("id, photo_url")
+        .ilike("email", user?.email || "")
+        .limit(1)
+        .single();
+
+      if (psychError || !psychData) {
+        alert("Usuário não encontrado no cadastro de profissionais. Cadastre-se primeiro.");
+        return;
+      }
+
+      const { url } = await uploadProfilePhoto(file, psychData.id);
+      await updatePsychologistPhoto(psychData.id, url);
+      setUserPhotoUrl(url);
+    } catch (err) {
+      console.error("Erro ao fazer upload:", err);
+      alert("Erro ao enviar foto. Tente novamente.");
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
+    }
+  };
 
   /* ── keyboard shortcuts ── */
   const handleKey = useCallback((e: KeyboardEvent) => {
@@ -163,8 +233,12 @@ export function Header() {
                 <p className="text-sm font-medium text-gray-900">{userName}</p>
                 {userCrp && <p className="text-xs text-gray-500">{userCrp}</p>}
               </div>
-              <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-indigo-600" />
+              <div className="w-9 h-9 bg-indigo-100 rounded-full overflow-hidden flex items-center justify-center border-2 border-gray-200">
+                {userPhotoUrl ? (
+                  <img src={userPhotoUrl} alt={userName} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-5 h-5 text-indigo-600" />
+                )}
               </div>
               <ChevronDown className={`w-4 h-4 text-gray-400 hidden sm:block transition-transform duration-200 ${showDropdown ? "rotate-180" : ""}`} />
             </button>
@@ -177,6 +251,17 @@ export function Header() {
                     <p className="text-sm font-medium text-gray-900">{userName}</p>
                     <p className="text-xs text-gray-500">{userEmail}</p>
                   </div>
+                  <label className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                    <Camera className="w-4 h-4 text-gray-400" />
+                    {uploadingPhoto ? "Enviando..." : "Trocar foto de perfil"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handlePhotoUpload}
+                      disabled={uploadingPhoto}
+                      className="hidden"
+                    />
+                  </label>
                   <button
                     onClick={() => { setShowDropdown(false); router.push("/configuracoes"); }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
