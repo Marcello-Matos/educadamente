@@ -66,9 +66,12 @@ export default function RegistroPage() {
       }
     } catch (err) {
       const msg = (err as { message?: string })?.message || "";
-      if (msg.includes("already registered")) setError("Este e-mail já está cadastrado.");
-      else if (msg.includes("duplicate key")) setError("Este CRP já está cadastrado.");
-      else setError("Não foi possível criar a conta. Tente novamente.");
+      const m = msg.toLowerCase();
+      if (m.includes("already registered") || m.includes("already been registered")) setError("Este e-mail já está cadastrado.");
+      else if (m.includes("duplicate key")) setError("Este CRP já está cadastrado.");
+      else if (m.includes("rate limit")) setError("Limite de envio de e-mails do Supabase atingido. Aguarde 1 hora ou desative a confirmação de e-mail no painel do Supabase (Authentication > Providers > Email > Confirm email).");
+      else if (m.includes("password")) setError("Senha rejeitada pelo servidor: " + msg);
+      else setError(msg ? `Erro: ${msg}` : "Não foi possível criar a conta. Tente novamente.");
       setLoading(false);
     }
   };

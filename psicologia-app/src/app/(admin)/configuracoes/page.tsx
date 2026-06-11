@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Shield,
   Bell,
@@ -14,8 +15,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { getPsychologists } from "@/lib/supabase/patients";
+import { Psychologist } from "@/lib/supabase/types";
 
 export default function ConfiguracoesPage() {
+  const [team, setTeam] = useState<Psychologist[]>([]);
+
+  useEffect(() => {
+    getPsychologists()
+      .then(setTeam)
+      .catch((err) => console.error("[configuracoes] erro ao carregar equipe:", err));
+  }, []);
+
   return (
     <div className="space-y-6 lg:space-y-8">
       <div>
@@ -124,42 +135,29 @@ export default function ConfiguracoesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                  <span className="text-xs font-bold text-indigo-600">MS</span>
+            {team.map((member) => (
+              <div key={member.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-bold text-indigo-600">
+                      {member.name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{member.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {member.specialties?.[0] || "Profissional"} • CRP {member.crp}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">Dra. Maria Santos</p>
-                  <p className="text-xs text-gray-500">Admin • CRP 06/123456</p>
-                </div>
+                <Badge variant={member.status === "ativo" ? "success" : "secondary"}>
+                  {member.status === "ativo" ? "Ativo" : "Inativo"}
+                </Badge>
               </div>
-              <Badge variant="success">Online</Badge>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                  <span className="text-xs font-bold text-emerald-600">JO</span>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Dr. João Oliveira</p>
-                  <p className="text-xs text-gray-500">Psicólogo • CRP 06/654321</p>
-                </div>
-              </div>
-              <Badge variant="success">Online</Badge>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                  <span className="text-xs font-bold text-amber-600">AC</span>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Dra. Ana Costa</p>
-                  <p className="text-xs text-gray-500">Psicóloga • CRP 06/111222</p>
-                </div>
-              </div>
-              <Badge variant="secondary">Offline</Badge>
-            </div>
+            ))}
+            {team.length === 0 && (
+              <p className="text-xs text-gray-400 text-center py-4">Nenhum profissional cadastrado ainda</p>
+            )}
             <Button variant="outline" className="w-full mt-2" size="sm">
               Adicionar Membro
             </Button>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useEffect, useState } from "react";
 import {
@@ -7,15 +7,29 @@ import {
   Filter,
   Eye,
   Edit,
-  FileText,
   Phone,
   Mail,
+  Trash2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { createPatient, getPatients, getPsychologists } from "@/lib/supabase/patients";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  createPatient,
+  deletePatient,
+  getPatients,
+  getPsychologists,
+  updatePatient,
+} from "@/lib/supabase/patients";
 import { CreatePatientInput, Patient, Psychologist } from "@/lib/supabase/types";
 
 const statusConfig = {
@@ -45,14 +59,56 @@ const initialForm: CreatePatientInput = {
   status: "ativo",
 };
 
+function patientToForm(patient: Patient): CreatePatientInput {
+  return {
+    name: patient.name,
+    cpf: patient.cpf ?? "",
+    birth_date: patient.birth_date ?? "",
+    email: patient.email ?? "",
+    phone: patient.phone,
+    gender: patient.gender ?? "",
+    address: patient.address ?? "",
+    psychologist_id: patient.psychologist_id ?? "",
+    plan: patient.plan,
+    emergency_contact: patient.emergency_contact ?? "",
+    emergency_phone: patient.emergency_phone ?? "",
+    status: patient.status,
+    start_date: patient.start_date,
+    notes: patient.notes,
+    diagnosis: patient.diagnosis,
+    cid: patient.cid,
+  };
+}
+
+function buildPatientPayload(form: CreatePatientInput, fallbackStartDate?: string | null): CreatePatientInput {
+  return {
+    ...form,
+    name: form.name.trim(),
+    phone: form.phone.trim(),
+    cpf: form.cpf?.trim() || null,
+    email: form.email?.trim() || null,
+    birth_date: form.birth_date || null,
+    gender: form.gender || null,
+    address: form.address?.trim() || null,
+    psychologist_id: form.psychologist_id || null,
+    emergency_contact: form.emergency_contact?.trim() || null,
+    emergency_phone: form.emergency_phone?.trim() || null,
+    start_date: fallbackStartDate || new Date().toISOString().split("T")[0],
+  };
+}
+
 export default function PacientesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [psychologists, setPsychologists] = useState<Psychologist[]>([]);
   const [form, setForm] = useState<CreatePatientInput>(initialForm);
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
+  const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
@@ -73,7 +129,11 @@ export default function PacientesPage() {
   };
 
   useEffect(() => {
-    loadData();
+    const timer = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   const filteredPatients = patients.filter((p) => {
@@ -89,6 +149,28 @@ export default function PacientesPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleNewPatient = () => {
+    setForm(initialForm);
+    setEditingPatient(null);
+    setShowForm(true);
+    setError(null);
+  };
+
+  const handleEditPatient = (patient: Patient) => {
+    setForm(patientToForm(patient));
+    setEditingPatient(patient);
+    setShowForm(true);
+    setError(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancelForm = () => {
+    setForm(initialForm);
+    setEditingPatient(null);
+    setShowForm(false);
+    setError(null);
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -101,29 +183,43 @@ export default function PacientesPage() {
       setSaving(true);
       setError(null);
 
-      const payload: CreatePatientInput = {
-        ...form,
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        cpf: form.cpf?.trim() || null,
-        email: form.email?.trim() || null,
-        birth_date: form.birth_date || null,
-        gender: form.gender || null,
-        address: form.address?.trim() || null,
-        psychologist_id: form.psychologist_id || null,
-        emergency_contact: form.emergency_contact?.trim() || null,
-        emergency_phone: form.emergency_phone?.trim() || null,
-        start_date: new Date().toISOString().split("T")[0],
-      };
+      const payload = buildPatientPayload(form, editingPatient?.start_date);
 
-      const created = await createPatient(payload);
-      setPatients((prev) => [created, ...prev]);
+      if (editingPatient) {
+        const updated = await updatePatient(editingPatient.id, payload);
+        setPatients((prev) => prev.map((patient) => (patient.id === updated.id ? updated : patient)));
+      } else {
+        const created = await createPatient(payload);
+        setPatients((prev) => [created, ...prev]);
+      }
+
       setForm(initialForm);
+      setEditingPatient(null);
       setShowForm(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar paciente");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeletePatient = async () => {
+    if (!deletingPatient) return;
+
+    try {
+      setDeleting(true);
+      setError(null);
+      await deletePatient(deletingPatient.id);
+      setPatients((prev) => prev.filter((patient) => patient.id !== deletingPatient.id));
+      setDeletingPatient(null);
+
+      if (editingPatient?.id === deletingPatient.id) {
+        handleCancelForm();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao excluir paciente");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -136,7 +232,7 @@ export default function PacientesPage() {
             Gerencie o cadastro dos seus pacientes
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
+        <Button onClick={handleNewPatient} className="w-full sm:w-auto">
           <Plus className="w-4 h-4" />
           Novo Paciente
         </Button>
@@ -167,7 +263,9 @@ export default function PacientesPage() {
       {showForm && (
         <Card className="border-indigo-200 bg-indigo-50/30">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold tracking-tight">Cadastro de Paciente</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">
+              {editingPatient ? "Editar Paciente" : "Cadastro de Paciente"}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -223,6 +321,14 @@ export default function PacientesPage() {
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+                <select value={form.status} onChange={(e) => handleChange("status", e.target.value)} className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                  <option value="ativo">Ativo</option>
+                  <option value="inativo">Inativo</option>
+                  <option value="alta">Alta</option>
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Contato de Emergência</label>
                 <Input placeholder="Nome do contato" value={form.emergency_contact ?? ""} onChange={(e) => handleChange("emergency_contact", e.target.value)} />
               </div>
@@ -230,9 +336,9 @@ export default function PacientesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefone Emergência</label>
                 <Input placeholder="(00) 00000-0000" value={form.emergency_phone ?? ""} onChange={(e) => handleChange("emergency_phone", e.target.value)} />
               </div>
-              <div className="col-span-full flex gap-3 pt-4">
-                <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Salvar Paciente"}</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)} disabled={saving}>Cancelar</Button>
+              <div className="col-span-full flex flex-col sm:flex-row gap-3 pt-4">
+                <Button type="submit" disabled={saving}>{saving ? "Salvando..." : editingPatient ? "Salvar Alterações" : "Salvar Paciente"}</Button>
+                <Button type="button" variant="outline" onClick={handleCancelForm} disabled={saving}>Cancelar</Button>
               </div>
             </form>
           </CardContent>
@@ -285,9 +391,15 @@ export default function PacientesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8"><FileText className="w-4 h-4" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" title="Ver detalhes" onClick={() => setViewingPatient(patient)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" title="Editar paciente" onClick={() => handleEditPatient(patient)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700" title="Excluir paciente" onClick={() => setDeletingPatient(patient)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -297,6 +409,88 @@ export default function PacientesPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!viewingPatient} onOpenChange={(open) => !open && setViewingPatient(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{viewingPatient?.name}</DialogTitle>
+            <DialogDescription>Dados cadastrais do paciente</DialogDescription>
+          </DialogHeader>
+          {viewingPatient && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-500">CPF</p>
+                <p className="text-gray-900">{viewingPatient.cpf || "Não informado"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-500">Nascimento</p>
+                <p className="text-gray-900">{viewingPatient.birth_date || "Não informado"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-500">Telefone</p>
+                <p className="text-gray-900">{viewingPatient.phone}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-500">Email</p>
+                <p className="text-gray-900">{viewingPatient.email || "Não informado"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-500">Psicólogo(a)</p>
+                <p className="text-gray-900">{viewingPatient.psychologists?.name || "Não atribuído"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-500">Plano e status</p>
+                <div className="mt-1 flex gap-2">
+                  <Badge variant={planConfig[viewingPatient.plan].variant}>{planConfig[viewingPatient.plan].label}</Badge>
+                  <Badge variant={statusConfig[viewingPatient.status].variant}>{statusConfig[viewingPatient.status].label}</Badge>
+                </div>
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-xs font-semibold uppercase text-gray-500">Endereço</p>
+                <p className="text-gray-900">{viewingPatient.address || "Não informado"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-500">Contato de emergência</p>
+                <p className="text-gray-900">{viewingPatient.emergency_contact || "Não informado"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-500">Telefone emergência</p>
+                <p className="text-gray-900">{viewingPatient.emergency_phone || "Não informado"}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setViewingPatient(null)}>Fechar</Button>
+            {viewingPatient && (
+              <Button type="button" onClick={() => {
+                handleEditPatient(viewingPatient);
+                setViewingPatient(null);
+              }}>
+                Editar
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deletingPatient} onOpenChange={(open) => !open && setDeletingPatient(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir paciente</DialogTitle>
+            <DialogDescription>
+              Esta ação removerá o cadastro de {deletingPatient?.name}. Confirme apenas se deseja excluir este paciente.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeletingPatient(null)} disabled={deleting}>
+              Cancelar
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleDeletePatient} disabled={deleting}>
+              {deleting ? "Excluindo..." : "Excluir Paciente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

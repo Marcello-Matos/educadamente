@@ -22,3 +22,20 @@ export async function createSession(input: CreateSessionInput) {
   if (error) throw error;
   return data as Session;
 }
+
+export async function updateSession(id: string, input: CreateSessionInput) {
+  const { data, error } = await supabase
+    .from("sessions")
+    .update(input)
+    .eq("id", id)
+    .select("*, patients(id, name, phone), psychologists(id, name, crp)")
+    .single();
+
+  if (error) throw error;
+  return data as Session;
+}
+
+export async function deleteSession(id: string) {
+  const { error } = await supabase.from("sessions").delete().eq("id", id);
+  if (error) throw error;
+}

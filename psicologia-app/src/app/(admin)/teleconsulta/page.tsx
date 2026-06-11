@@ -39,6 +39,8 @@ import { Input } from "@/components/ui/input";
 
 import { Badge } from "@/components/ui/badge";
 import { createRecording, updateRecording, uploadVideoBlob } from "@/lib/supabase/recordings";
+import { getPsychologists } from "@/lib/supabase/patients";
+import { Psychologist } from "@/lib/supabase/types";
 import { toast } from "@/hooks/use-toast";
 
 
@@ -85,225 +87,9 @@ interface ChatMsg {
 
 
 
-// ─── MOCK ROOMS (multiple simultaneous) ───
+// ─── ROOMS (começa vazio — salas criadas pelo usuário) ───
 
-const initialRooms: TeleRoom[] = [
-
-  {
-
-    id: "room-1",
-
-    patientName: "Carlos Alberto Silva",
-
-    professionalName: "Dra. Maria Santos",
-
-    professionalRole: "Psicóloga",
-
-    date: "2024-12-20",
-
-    time: "09:00",
-
-    duration: 50,
-
-    status: "em_andamento",
-
-    roomLink: "https://educadamente.app/sala/room-1-abc",
-
-    chatMessages: [
-
-      { id: 1, sender: "professional", text: "Bom dia Carlos! Como foi sua semana?", time: "09:01" },
-
-      { id: 2, sender: "patient", text: "Bom dia Dra. Maria! Me senti mais tranquilo.", time: "09:02" },
-
-    ],
-
-  },
-
-  {
-
-    id: "room-2",
-
-    patientName: "Fernanda Oliveira",
-
-    professionalName: "Camila Rodrigues",
-
-    professionalRole: "Nutricionista",
-
-    date: "2024-12-20",
-
-    time: "09:00",
-
-    duration: 40,
-
-    status: "em_andamento",
-
-    roomLink: "https://educadamente.app/sala/room-2-def",
-
-    chatMessages: [
-
-      { id: 1, sender: "professional", text: "Oi Fernanda! Trouxe o diário alimentar?", time: "09:01" },
-
-      { id: 2, sender: "patient", text: "Trouxe sim! Anotei tudo certinho.", time: "09:02" },
-
-    ],
-
-  },
-
-  {
-
-    id: "room-3",
-
-    patientName: "Roberto Mendes",
-
-    professionalName: "Fernanda Lima",
-
-    professionalRole: "Fisioterapeuta",
-
-    date: "2024-12-20",
-
-    time: "09:30",
-
-    duration: 50,
-
-    status: "agendada",
-
-    roomLink: "https://educadamente.app/sala/room-3-ghi",
-
-    chatMessages: [],
-
-  },
-
-  {
-
-    id: "room-4",
-
-    patientName: "Juliana Almeida",
-
-    professionalName: "Patrícia Alves",
-
-    professionalRole: "Fonoaudióloga",
-
-    date: "2024-12-20",
-
-    time: "09:00",
-
-    duration: 45,
-
-    status: "em_andamento",
-
-    roomLink: "https://educadamente.app/sala/room-4-jkl",
-
-    chatMessages: [
-
-      { id: 1, sender: "professional", text: "Oi Juliana, vamos praticar os exercícios de hoje?", time: "09:01" },
-
-    ],
-
-  },
-
-  {
-
-    id: "room-5",
-
-    patientName: "Pedro Henrique Costa",
-
-    professionalName: "Renata Souza",
-
-    professionalRole: "Psicopedagoga",
-
-    date: "2024-12-20",
-
-    time: "10:00",
-
-    duration: 50,
-
-    status: "agendada",
-
-    roomLink: "https://educadamente.app/sala/room-5-mno",
-
-    chatMessages: [],
-
-  },
-
-  {
-
-    id: "room-6",
-
-    patientName: "Ana Beatriz Ramos",
-
-    professionalName: "Dr. João Oliveira",
-
-    professionalRole: "Psicólogo",
-
-    date: "2024-12-20",
-
-    time: "09:00",
-
-    duration: 50,
-
-    status: "em_andamento",
-
-    roomLink: "https://educadamente.app/sala/room-6-pqr",
-
-    chatMessages: [
-
-      { id: 1, sender: "professional", text: "Ana, como você está se sentindo com a nova rotina?", time: "09:03" },
-
-      { id: 2, sender: "patient", text: "Está sendo desafiador, mas sinto progresso.", time: "09:04" },
-
-    ],
-
-  },
-
-  {
-
-    id: "room-7",
-
-    patientName: "Marcos Vinícius",
-
-    professionalName: "Dra. Maria Santos",
-
-    professionalRole: "Psicóloga",
-
-    date: "2024-12-20",
-
-    time: "10:00",
-
-    duration: 50,
-
-    status: "agendada",
-
-    roomLink: "https://educadamente.app/sala/room-7-stu",
-
-    chatMessages: [],
-
-  },
-
-  {
-
-    id: "room-8",
-
-    patientName: "Lúcia Ferreira",
-
-    professionalName: "Camila Rodrigues",
-
-    professionalRole: "Nutricionista",
-
-    date: "2024-12-20",
-
-    time: "10:00",
-
-    duration: 30,
-
-    status: "agendada",
-
-    roomLink: "https://educadamente.app/sala/room-8-vwx",
-
-    chatMessages: [],
-
-  },
-
-];
+const initialRooms: TeleRoom[] = [];
 
 
 
@@ -363,6 +149,14 @@ export default function TeleconsultaPage() {
 
   const [quickPatient, setQuickPatient] = useState("");
   const [quickProfessional, setQuickProfessional] = useState("");
+  const [professionals, setProfessionals] = useState<Psychologist[]>([]);
+
+  // Carrega os profissionais reais cadastrados no banco
+  useEffect(() => {
+    getPsychologists()
+      .then((list) => setProfessionals(list))
+      .catch((err) => console.error("[teleconsulta] erro ao carregar profissionais:", err));
+  }, []);
 
   // ─── GRAVAÇÃO DE TELA ───
   const [isRecording, setIsRecording] = useState(false);
@@ -529,21 +323,7 @@ export default function TeleconsultaPage() {
 
     if (!quickPatient || !quickProfessional) return;
 
-    const profInfo: Record<string, string> = {
-
-      "Dra. Maria Santos": "Psicóloga",
-
-      "Dr. João Oliveira": "Psicólogo",
-
-      "Camila Rodrigues": "Nutricionista",
-
-      "Fernanda Lima": "Fisioterapeuta",
-
-      "Patrícia Alves": "Fonoaudióloga",
-
-      "Renata Souza": "Psicopedagoga",
-
-    };
+    const prof = professionals.find((p) => p.name === quickProfessional);
 
     const newRoom: TeleRoom = {
 
@@ -553,7 +333,7 @@ export default function TeleconsultaPage() {
 
       professionalName: quickProfessional,
 
-      professionalRole: profInfo[quickProfessional] || "Profissional",
+      professionalRole: prof?.specialties?.[0] || "Profissional",
 
       date: new Date().toISOString().split("T")[0],
 
@@ -647,9 +427,9 @@ export default function TeleconsultaPage() {
             });
             toast.success("Gravação salva", `Vídeo de ${formatDuration(duration)} salvo no banco.`);
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error("[recording] upload error:", err);
-          toast.error("Erro ao salvar gravação", "Não foi possível fazer upload do vídeo.");
+          toast.error("Erro ao salvar gravação", err?.message || "Não foi possível fazer upload do vídeo.");
         }
 
         // Só para as tracks se NÃO for o stream da câmera ao vivo
@@ -767,58 +547,38 @@ export default function TeleconsultaPage() {
 
                 <div className="relative bg-gray-900 aspect-video flex items-center justify-center">
 
-                  {/* Self-view: sua webcam ao vivo (estilo Zoom) */}
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className={`absolute inset-0 w-full h-full object-cover -scale-x-100 ${videoOn && !camError ? "block" : "hidden"}`}
-                  />
-
-                  {/* Placeholder quando câmera desligada ou com erro */}
-                  {(!videoOn || camError) && (
-                    <div className="text-center z-10">
-                      <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                        {camError ? <VideoOff className="w-12 h-12 text-red-400" /> : <User className="w-12 h-12 text-gray-400" />}
-                      </div>
-                      <p className="text-white text-lg">{activeRoom.patientName}</p>
-                      <p className="text-gray-400 text-sm">
-                        Profissional: {activeRoom.professionalName} ({activeRoom.professionalRole})
-                      </p>
-                      <p className={`text-xs mt-1 ${camError ? "text-red-400" : "text-gray-500"}`}>
-                        {camError ? camError : !videoOn ? "Câmera desligada" : "Conectando..."}
-                      </p>
+                  {/* Área principal: vídeo do convidado/paciente (aguardando conexão) */}
+                  <div className="text-center z-10">
+                    <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <User className="w-12 h-12 text-gray-400" />
                     </div>
-                  )}
+                    <p className="text-white text-lg">{activeRoom.patientName}</p>
+                    <p className="text-gray-400 text-sm">Aguardando o convidado entrar...</p>
+                  </div>
 
-                  {/* Label do paciente sobreposto quando vídeo ligado */}
-                  {videoOn && !camError && (
-                    <div className="absolute bottom-4 left-4 bg-black/50 px-3 py-1.5 rounded-lg z-10">
-                      <p className="text-white text-sm font-medium">{activeRoom.professionalName}</p>
-                      <p className="text-gray-300 text-xs">{activeRoom.professionalRole} • Você</p>
-                    </div>
-                  )}
+                  {/* Label do convidado */}
+                  <div className="absolute bottom-4 left-4 bg-black/50 px-3 py-1.5 rounded-lg z-10">
+                    <p className="text-white text-sm font-medium">{activeRoom.patientName}</p>
+                    <p className="text-gray-300 text-xs">Convidado</p>
+                  </div>
 
-                  {/* Miniatura "Você" no canto */}
+                  {/* Miniatura "Você": sua webcam ao vivo (estilo Zoom) */}
                   <div className="absolute bottom-4 right-4 w-24 h-20 sm:w-48 sm:h-36 bg-gray-800 rounded-lg border-2 border-gray-600 overflow-hidden flex items-center justify-center z-10">
+                    <video
+                      ref={localVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className={`w-full h-full object-cover -scale-x-100 ${videoOn && !camError ? "block" : "hidden"}`}
+                    />
                     {videoOn && !camError ? (
-                      <>
-                        <video
-                          autoPlay
-                          playsInline
-                          muted
-                          className="w-full h-full object-cover -scale-x-100"
-                          ref={(el) => {
-                            if (el && camStreamRef.current) el.srcObject = camStreamRef.current;
-                          }}
-                        />
-                        <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">Você</span>
-                      </>
+                      <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+                        {activeRoom.professionalName} • Você
+                      </span>
                     ) : (
                       <div className="text-center">
-                        <VideoOff className="w-8 h-8 text-red-400 mx-auto" />
-                        <p className="text-red-400 text-xs mt-1">Câmera desligada</p>
+                        <VideoOff className="w-6 h-6 sm:w-8 sm:h-8 text-red-400 mx-auto" />
+                        <p className="text-red-400 text-[10px] sm:text-xs mt-1">{camError ? camError : "Câmera desligada"}</p>
                       </div>
                     )}
                   </div>
@@ -1386,19 +1146,17 @@ export default function TeleconsultaPage() {
 
                   <option value="">Selecione</option>
 
-                  <option value="Dra. Maria Santos">Dra. Maria Santos (Psicóloga)</option>
-
-                  <option value="Dr. João Oliveira">Dr. João Oliveira (Psicólogo)</option>
-
-                  <option value="Camila Rodrigues">Camila Rodrigues (Nutricionista)</option>
-
-                  <option value="Fernanda Lima">Fernanda Lima (Fisioterapeuta)</option>
-
-                  <option value="Patrícia Alves">Patrícia Alves (Fonoaudióloga)</option>
-
-                  <option value="Renata Souza">Renata Souza (Psicopedagoga)</option>
+                  {professionals.map((p) => (
+                    <option key={p.id} value={p.name}>
+                      {p.name}{p.specialties?.[0] ? ` (${p.specialties[0]})` : ""}
+                    </option>
+                  ))}
 
                 </select>
+
+                {professionals.length === 0 && (
+                  <p className="text-[11px] text-amber-600 mt-1">Nenhum profissional cadastrado. Cadastre em Profissionais.</p>
+                )}
 
               </div>
 

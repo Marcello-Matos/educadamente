@@ -39,6 +39,19 @@ export async function deleteReminder(id: string) {
   if (error) throw error;
 }
 
+export async function updateSessionReminders(
+  sessionId: string,
+  input: Pick<CreateReminderInput, "notes" | "remind_at" | "patient_id" | "psychologist_id">
+) {
+  const { error } = await supabase
+    .from("reminders")
+    .update(input)
+    .eq("session_id", sessionId)
+    .eq("done", false);
+
+  if (error) throw error;
+}
+
 export async function getPendingReminderCount() {
   const { count, error } = await supabase
     .from("reminders")

@@ -102,3 +102,20 @@ export async function createPatient(input: CreatePatientInput) {
   if (error) throw error;
   return data as Patient;
 }
+
+export async function updatePatient(id: string, input: CreatePatientInput) {
+  const { data, error } = await supabase
+    .from("patients")
+    .update(input)
+    .eq("id", id)
+    .select("*, psychologists(id, name, crp)")
+    .single();
+
+  if (error) throw error;
+  return data as Patient;
+}
+
+export async function deletePatient(id: string) {
+  const { error } = await supabase.from("patients").delete().eq("id", id);
+  if (error) throw error;
+}

@@ -218,8 +218,33 @@ alter table session_recordings enable row level security;
 
 -- Bucket para vídeos de teleconsulta
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('session-recordings', 'session-recordings', false, 524288000, array['video/webm', 'video/mp4', 'video/x-matroska'])
-on conflict (id) do update set allowed_mime_types = array['video/webm', 'video/mp4', 'video/x-matroska'];
+values ('session-recordings', 'session-recordings', true, 524288000, array['video/webm', 'video/mp4', 'video/x-matroska'])
+on conflict (id) do update set
+  public = true,
+  allowed_mime_types = array['video/webm', 'video/mp4', 'video/x-matroska'];
+
+-- Políticas de Storage para o bucket session-recordings (sem elas o upload é bloqueado pelo RLS)
+drop policy if exists "recordings read" on storage.objects;
+drop policy if exists "recordings insert" on storage.objects;
+drop policy if exists "recordings update" on storage.objects;
+drop policy if exists "recordings delete" on storage.objects;
+
+create policy "recordings read" on storage.objects
+  for select to authenticated, anon
+  using (bucket_id = 'session-recordings');
+
+create policy "recordings insert" on storage.objects
+  for insert to authenticated, anon
+  with check (bucket_id = 'session-recordings');
+
+create policy "recordings update" on storage.objects
+  for update to authenticated, anon
+  using (bucket_id = 'session-recordings')
+  with check (bucket_id = 'session-recordings');
+
+create policy "recordings delete" on storage.objects
+  for delete to authenticated, anon
+  using (bucket_id = 'session-recordings');
 
 -- Políticas (cria para authenticated e anon). Recria de forma segura.
 do $$

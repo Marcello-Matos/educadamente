@@ -9,6 +9,24 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { signIn, resetPassword } from "@/lib/supabase/auth";
 import { toast } from "@/hooks/use-toast";
 
+function getLoginErrorMessage(error: unknown) {
+  const msg = ((error as { message?: string })?.message || "").toLowerCase();
+
+  if (msg.includes("invalid login")) {
+    return "E-mail ou senha incorretos. Confira tambem se este usuario tem senha cadastrada no Supabase Auth.";
+  }
+
+  if (msg.includes("email not confirmed")) {
+    return "Confirme seu e-mail antes de entrar.";
+  }
+
+  if (msg.includes("rate limit")) {
+    return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+  }
+
+  return "Nao foi possivel entrar. Tente novamente.";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -20,35 +38,43 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!email || !password) { setError("Preencha e-mail e senha."); return; }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
+      setError("Preencha e-mail e senha.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await signIn(email, password);
+      await signIn(normalizedEmail, password);
       router.replace("/dashboard");
     } catch (err) {
-      const msg = (err as { message?: string })?.message || "";
-      if (msg.includes("Invalid login")) setError("E-mail ou senha incorretos.");
-      else if (msg.includes("Email not confirmed")) setError("Confirme seu e-mail antes de entrar.");
-      else setError("Não foi possível entrar. Tente novamente.");
+      setError(getLoginErrorMessage(err));
       setLoading(false);
     }
   };
 
   const handleForgot = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!email) { toast.warning("Informe seu e-mail", "Digite o e-mail no campo acima e clique novamente."); return; }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      toast.warning("Informe seu e-mail", "Digite o e-mail no campo acima e clique novamente.");
+      return;
+    }
+
     try {
-      await resetPassword(email);
+      await resetPassword(normalizedEmail);
       toast.success("E-mail enviado", "Verifique sua caixa de entrada para redefinir a senha.");
     } catch {
-      toast.error("Erro", "Não foi possível enviar o e-mail de redefinição.");
+      toast.error("Erro", "Nao foi possivel enviar o e-mail de redefinicao.");
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <img
             src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/logo.png`}
@@ -58,7 +84,7 @@ export default function LoginPage() {
             className="mx-auto mb-4 rounded-2xl"
           />
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 leading-tight">Sistema Educadamente</h1>
-          <p className="text-gray-500 mt-1 leading-relaxed">Sistema de Gestão para Psicólogos</p>
+          <p className="text-gray-500 mt-1 leading-relaxed">Sistema de Gestao para Psicologos</p>
         </div>
 
         <Card className="shadow-xl border-0">
@@ -75,10 +101,9 @@ export default function LoginPage() {
                   {error}
                 </div>
               )}
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
@@ -93,14 +118,12 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Senha
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Senha</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
+                    placeholder="********"
                     className="pl-10 pr-10"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -143,7 +166,7 @@ export default function LoginPage() {
 
             <div className="mt-6 text-center border-t border-gray-100 pt-4">
               <p className="text-sm text-gray-600">
-                Não tem uma conta?{" "}
+                Nao tem uma conta?{" "}
                 <a href="/registro" className="text-indigo-600 hover:text-indigo-700 font-semibold">
                   Cadastre-se
                 </a>
@@ -155,7 +178,7 @@ export default function LoginPage() {
         <div className="mt-6 text-center">
           <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
             <Shield className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Protegido por criptografia AES-256 • Conformidade LGPD</span>
+            <span>Protegido por criptografia AES-256 - Conformidade LGPD</span>
           </div>
         </div>
       </div>

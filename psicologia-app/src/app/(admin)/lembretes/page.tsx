@@ -24,6 +24,13 @@ function fmtWhen(iso: string) {
   return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
+function localDateTimeToIso(value: string) {
+  const [datePart, timePart] = value.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
+  return new Date(year, month - 1, day, hour, minute).toISOString();
+}
+
 export default function LembretesPage() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -31,6 +38,7 @@ export default function LembretesPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [now, setNow] = useState<number | null>(null);
 
   // form
   const [title, setTitle] = useState("");
@@ -41,6 +49,10 @@ export default function LembretesPage() {
   const [psyId, setPsyId] = useState("");
 
   useEffect(() => {
+    const updateNow = () => setNow(new Date().getTime());
+    updateNow();
+    const timer = window.setInterval(updateNow, 60_000);
+
     Promise.all([getReminders(), getPatients(), getPsychologists()])
       .then(([r, p, ps]) => { setReminders(r); setPatients(p); setPsych(ps); })
       .catch(() => {})
@@ -52,7 +64,10 @@ export default function LembretesPage() {
         getReminders().then(setReminders).catch(() => {});
       })
       .subscribe();
-    return () => { supabase.removeChannel(channelRt); };
+    return () => {
+      window.clearInterval(timer);
+      supabase.removeChannel(channelRt);
+    };
   }, []);
 
   function reset() {
@@ -66,7 +81,7 @@ export default function LembretesPage() {
       const r = await createReminder({
         title: title.trim(),
         notes: notes || null,
-        remind_at: new Date(when).toISOString(),
+        remind_at: localDateTimeToIso(when),
         channel,
         patient_id: patientId || null,
         psychologist_id: psyId || null,
@@ -90,10 +105,9 @@ export default function LembretesPage() {
     try { await deleteReminder(id); } catch { toast.error("Erro ao excluir"); }
   }
 
-  const now = Date.now();
   const pending = reminders.filter(r => !r.done);
-  const upcoming = pending.filter(r => new Date(r.remind_at).getTime() >= now);
-  const overdue = pending.filter(r => new Date(r.remind_at).getTime() < now);
+  const upcoming = now === null ? [] : pending.filter(r => new Date(r.remind_at).getTime() >= now);
+  const overdue = now === null ? [] : pending.filter(r => new Date(r.remind_at).getTime() < now);
   const done = reminders.filter(r => r.done);
 
   const Item = ({ r, late }: { r: Reminder; late?: boolean }) => {
@@ -110,7 +124,7 @@ export default function LembretesPage() {
           {r.notes && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{r.notes}</p>}
           <div className="flex flex-wrap items-center gap-1.5 mt-2">
             <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${late ? "bg-rose-100 text-rose-700" : "bg-gray-100 text-gray-600"}`}>
-              <Clock className="w-2.5 h-2.5" /> {fmtWhen(r.remind_at)}
+              <Clock className="w-2.5 h-2.5" /> Lembrar em {fmtWhen(r.remind_at)}
             </span>
             <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${ch.cls}`}>
               <ch.icon className="w-2.5 h-2.5" /> {ch.label}

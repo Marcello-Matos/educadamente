@@ -17,7 +17,7 @@ export async function createUserAccount(email: string, password: string, meta: S
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await temp.auth.signUp({
-    email,
+    email: email.trim().toLowerCase(),
     password,
     options: { data: meta },
   });
@@ -26,14 +26,17 @@ export async function createUserAccount(email: string, password: string, meta: S
 }
 
 export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password,
+  });
   if (error) throw error;
   return data;
 }
 
 export async function signUp(email: string, password: string, meta: SignUpMeta) {
   const { data, error } = await supabase.auth.signUp({
-    email,
+    email: email.trim().toLowerCase(),
     password,
     options: { data: meta },
   });
@@ -53,6 +56,6 @@ export async function getSession() {
 
 export async function resetPassword(email: string) {
   const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/login` : undefined;
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo });
   if (error) throw error;
 }

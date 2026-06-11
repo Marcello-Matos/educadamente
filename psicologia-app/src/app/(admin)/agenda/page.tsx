@@ -3,15 +3,15 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Plus, ChevronLeft, ChevronRight, Video, MapPin,
-  X, Clock, User, Calendar, Palette, Check, CalendarDays, Bell,
+  X, Clock, User, Calendar, Palette, Check, CalendarDays, Bell, Pencil, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase/client";
 import { getPatients, getPsychologists } from "@/lib/supabase/patients";
-import { getSessions, createSession } from "@/lib/supabase/sessions";
-import { createReminder } from "@/lib/supabase/reminders";
+import { getSessions, createSession, deleteSession, updateSession } from "@/lib/supabase/sessions";
+import { createReminder, updateSessionReminders } from "@/lib/supabase/reminders";
 import { Patient, Psychologist, Session } from "@/lib/supabase/types";
 import { PRO_PALETTE as PALETTE } from "@/lib/palette";
 
@@ -58,7 +58,13 @@ export default function AgendaPage() {
   const [showModal, setShowModal]     = useState(false);
   const [colorModal, setColorModal]   = useState<string | null>(null); // psychologist id
   const [dayModal, setDayModal]       = useState<string | null>(null); // selected day yyyy-mm-dd
-  const [psyColors, setPsyColors]     = useState<Record<string, string>>({});
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
+  const [deletingSession, setDeletingSession] = useState<Session | null>(null);
+  const [psyColors, setPsyColors]     = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  });
   const [saving, setSaving]           = useState(false);
 
   // Form
@@ -68,12 +74,11 @@ export default function AgendaPage() {
   const [fTime, setFTime]         = useState("09:00");
   const [fDur, setFDur]           = useState("50");
   const [fType, setFType]         = useState("presencial");
+  const [fStatus, setFStatus]     = useState("agendada");
   const [fReminder, setFReminder] = useState(true);
-  const [fReminderHours, setFReminderHours] = useState("24");
+  const [fReminderHours, setFReminderHours] = useState("1");
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) setPsyColors(JSON.parse(stored));
     Promise.all([getSessions(), getPatients(), getPsychologists()])
       .then(([s, p, ps]) => { setSessions(s); setPatients(p); setPsych(ps); })
       .catch(() => {});
@@ -130,7 +135,30 @@ export default function AgendaPage() {
   function goToday() { setAnchor(new Date()); }
 
   function openNewSession(date?: string) {
+    setEditingSession(null);
+    setFPatient("");
+    setFPsy("");
     if (date) setFDate(date);
+    setFTime("09:00");
+    setFDur("50");
+    setFType("presencial");
+    setFStatus("agendada");
+    setFReminder(true);
+    setFReminderHours("1");
+    setShowModal(true);
+  }
+
+  function openEditSession(session: Session) {
+    setEditingSession(session);
+    setFPatient(session.patient_id);
+    setFPsy(session.psychologist_id ?? "");
+    setFDate(session.session_date);
+    setFTime(session.session_time.slice(0, 5));
+    setFDur(String(session.duration));
+    setFType(session.type);
+    setFStatus(session.status);
+    setFReminder(false);
+    setDayModal(null);
     setShowModal(true);
   }
 
@@ -138,7 +166,35 @@ export default function AgendaPage() {
     if (!fPatient || !fPsy || !fDate || !fTime) return;
     setSaving(true);
     try {
-      const s = await createSession({ patient_id: fPatient, psychologist_id: fPsy, session_date: fDate, session_time: fTime, duration: Number(fDur), type: fType as "presencial" | "teleconsulta" });
+      const payload = {
+        patient_id: fPatient,
+        psychologist_id: fPsy,
+        session_date: fDate,
+        session_time: fTime,
+        duration: Number(fDur),
+        type: fType as "presencial" | "teleconsulta",
+        status: fStatus as "agendada" | "realizada" | "cancelada" | "falta",
+      };
+
+      if (editingSession) {
+        const updated = await updateSession(editingSession.id, payload);
+        const sessionStart = new Date(`${fDate}T${fTime}:00`);
+        const remindAt = new Date(sessionStart.getTime() - 60 * 60 * 1000);
+        try {
+          await updateSessionReminders(editingSession.id, {
+            notes: `Sessão ${fType} agendada para ${new Date(`${fDate}T00:00:00`).toLocaleDateString("pt-BR")} às ${fTime}.`,
+            remind_at: remindAt.toISOString(),
+            patient_id: fPatient,
+            psychologist_id: fPsy,
+          });
+        } catch { /* lembrete é complementar */ }
+        setSessions(prev => prev.map(session => session.id === updated.id ? updated : session));
+        setShowModal(false);
+        setEditingSession(null);
+        return;
+      }
+
+      const s = await createSession(payload);
       setSessions(prev => [...prev, s]);
 
       // Lembrete automático X horas antes da sessão
@@ -149,7 +205,7 @@ export default function AgendaPage() {
         try {
           await createReminder({
             title: `Lembrete: sessão com ${patientName}`,
-            notes: `Sessão ${fType} às ${fTime} do dia ${new Date(`${fDate}T00:00:00`).toLocaleDateString("pt-BR")}.`,
+            notes: `Sessão ${fType} agendada para ${new Date(`${fDate}T00:00:00`).toLocaleDateString("pt-BR")} às ${fTime}.`,
             remind_at: remindAt.toISOString(),
             channel: "whatsapp",
             session_id: s.id,
@@ -160,7 +216,18 @@ export default function AgendaPage() {
       }
 
       setShowModal(false);
-    } catch (_) { /* silent */ }
+    } catch { /* silent */ }
+    finally { setSaving(false); }
+  }
+
+  async function handleDeleteSession() {
+    if (!deletingSession) return;
+    setSaving(true);
+    try {
+      await deleteSession(deletingSession.id);
+      setSessions(prev => prev.filter(session => session.id !== deletingSession.id));
+      setDeletingSession(null);
+    } catch { /* silent */ }
     finally { setSaving(false); }
   }
 
@@ -332,6 +399,24 @@ export default function AgendaPage() {
                       {s.type === "teleconsulta" ? <Video className="w-4 h-4 text-gray-400" /> : <MapPin className="w-4 h-4 text-gray-400" />}
                       <Badge variant={STATUS_CFG[s.status].variant}>{STATUS_CFG[s.status].label}</Badge>
                     </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => openEditSession(s)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-white transition-colors"
+                        title="Editar sessão"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingSession(s)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-white transition-colors"
+                        title="Excluir sessão"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -380,16 +465,16 @@ export default function AgendaPage() {
 
       {/* ── NEW SESSION MODAL ── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => { setShowModal(false); setEditingSession(null); }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
                   <Calendar className="w-4 h-4 text-indigo-600" />
                 </div>
-                <h3 className="text-base font-bold text-gray-900">Nova Sessão</h3>
+                <h3 className="text-base font-bold text-gray-900">{editingSession ? "Editar Sessão" : "Nova Sessão"}</h3>
               </div>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+              <button onClick={() => { setShowModal(false); setEditingSession(null); }} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -460,8 +545,20 @@ export default function AgendaPage() {
                   </div>
                 </div>
 
+                {editingSession && (
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
+                    <select value={fStatus} onChange={e => setFStatus(e.target.value)} className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                      <option value="agendada">Agendada</option>
+                      <option value="realizada">Realizada</option>
+                      <option value="cancelada">Cancelada</option>
+                      <option value="falta">Falta</option>
+                    </select>
+                  </div>
+                )}
+
                 {/* Lembrete automático */}
-                <div className="sm:col-span-2">
+                {!editingSession && <div className="sm:col-span-2">
                   <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <button
@@ -472,7 +569,7 @@ export default function AgendaPage() {
                         <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${fReminder ? "translate-x-4" : ""}`} />
                       </button>
                       <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                        <Bell className="w-3.5 h-3.5 text-indigo-500" /> Criar lembrete
+                        <Bell className="w-3.5 h-3.5 text-indigo-500" /> Criar lembrete antes da sessão
                       </span>
                     </label>
                     {fReminder && (
@@ -485,14 +582,33 @@ export default function AgendaPage() {
                       </select>
                     )}
                   </div>
-                </div>
+                </div>}
               </div>
             </div>
 
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
-              <Button variant="outline" onClick={() => setShowModal(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => { setShowModal(false); setEditingSession(null); }}>Cancelar</Button>
               <Button onClick={handleSave} disabled={saving || !fPatient || !fPsy} className="bg-indigo-600 hover:bg-indigo-700 min-w-[120px]">
-                {saving ? "Salvando..." : "Agendar Sessão"}
+                {saving ? "Salvando..." : editingSession ? "Salvar Alterações" : "Agendar Sessão"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deletingSession && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setDeletingSession(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-base font-bold text-gray-900">Excluir sessão</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Remover sessão de {deletingSession.patients?.name || "paciente"} em {new Date(`${deletingSession.session_date}T00:00:00`).toLocaleDateString("pt-BR")} às {deletingSession.session_time.slice(0, 5)}?
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50">
+              <Button variant="outline" onClick={() => setDeletingSession(null)} disabled={saving}>Cancelar</Button>
+              <Button variant="destructive" onClick={handleDeleteSession} disabled={saving}>
+                {saving ? "Excluindo..." : "Excluir Sessão"}
               </Button>
             </div>
           </div>
