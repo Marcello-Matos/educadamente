@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Lock, Mail, Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -167,9 +168,9 @@ export default function LoginPage() {
             <div className="mt-6 text-center border-t border-gray-100 pt-4">
               <p className="text-sm text-gray-600">
                 Nao tem uma conta?{" "}
-                <a href="/registro" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+                <Link href="/registro" className="text-indigo-600 hover:text-indigo-700 font-semibold">
                   Cadastre-se
-                </a>
+                </Link>
               </p>
             </div>
           </CardContent>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Lock, Mail, Eye, EyeOff, Shield, User, Phone, ArrowLeft, AlertCircle, Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -377,9 +378,9 @@ export default function RegistroPage() {
             <div className="mt-6 text-center border-t border-gray-100 pt-4">
               <p className="text-sm text-gray-600">
                 Já tem uma conta?{" "}
-                <a href="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+                <Link href="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold">
                   Fazer login
-                </a>
+                </Link>
               </p>
             </div>
           </CardContent>
